@@ -321,9 +321,167 @@ VK_KHR_deferred_host_operations
 VK_KHR_ray_query
 VK_KHR_shader_clock
 
-Loading File:  C:/Users/chaowei/Desktop/vk_path_tracing_demo/bin_x64/Debug/../../ReSTIR_path_tracer/path_tracer/../media/scenes/living_room/living_room.obj 
+ERROR: VUID-VkDeviceCreateInfo-pNext-pNext 
+ --> vkCreateDevice(): pCreateInfo->pNext chain includes a structure with unexpected VkStructureType VK_STRUCTURE_TYPE_SUBMIT_INFO.
+pNext -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VkPhysicalDeviceFeatures2] -> [VkPhysicalDeviceVulkan11Features] -> [VkPhysicalDeviceVulkan12Features] -> [VkSubmitInfo] -> [Unknown VkStructureType 7530344] -> [Unknown VkStructureType 71398464] -> [Unknown VkStructureType 71398464]
+This error is based on the Valid Usage documentation for version 313 of the Vulkan header.  It is possible that you are using a struct from a private extension or an extension that was added to a later version of the Vulkan header, in which case the use of pCreateInfo->pNext is undefined and may not work correctly with validation enabled.
+The Vulkan spec states: Each pNext member of any structure (including this one) in the pNext chain must be either NULL or a pointer to a valid struct for extending VkDeviceCreateInfo (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/devsandqueues.html#VUID-VkDeviceCreateInfo-pNext-pNext)
+ERROR: VUID-VkDeviceCreateInfo-pNext-pNext 
+ --> vkCreateDevice(): pCreateInfo->pNext chain includes a structure with unknown VkStructureType (7530344).
+pNext -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VkPhysicalDeviceFeatures2] -> [VkPhysicalDeviceVulkan11Features] -> [VkPhysicalDeviceVulkan12Features] -> [VkSubmitInfo] -> [Unknown VkStructureType 7530344] -> [Unknown VkStructureType 71398464] -> [Unknown VkStructureType 71398464]
+This error is based on the Valid Usage documentation for version 313 of the Vulkan header.  It is possible that you are using a struct from a private extension or an extension that was added to a later version of the Vulkan header, in which case the use of pCreateInfo->pNext is undefined and may not work correctly with validation enabled.
+The Vulkan spec states: Each pNext member of any structure (including this one) in the pNext chain must be either NULL or a pointer to a valid struct for extending VkDeviceCreateInfo (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/devsandqueues.html#VUID-VkDeviceCreateInfo-pNext-pNext)
+ERROR: VUID-VkDeviceCreateInfo-pNext-pNext 
+ --> vkCreateDevice(): pCreateInfo->pNext chain includes a structure with unknown VkStructureType (71398464).
+pNext -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VkPhysicalDeviceFeatures2] -> [VkPhysicalDeviceVulkan11Features] -> [VkPhysicalDeviceVulkan12Features] -> [VkSubmitInfo] -> [Unknown VkStructureType 7530344] -> [Unknown VkStructureType 71398464] -> [Unknown VkStructureType 71398464]
+This error is based on the Valid Usage documentation for version 313 of the Vulkan header.  It is possible that you are using a struct from a private extension or an extension that was added to a later version of the Vulkan header, in which case the use of pCreateInfo->pNext is undefined and may not work correctly with validation enabled.
+The Vulkan spec states: Each pNext member of any structure (including this one) in the pNext chain must be either NULL or a pointer to a valid struct for extending VkDeviceCreateInfo (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/devsandqueues.html#VUID-VkDeviceCreateInfo-pNext-pNext)
+ERROR: VUID-VkDeviceCreateInfo-sType-unique 
+ --> vkCreateDevice(): pCreateInfo->pNext chain contains duplicate structure types: Unhandled VkStructureType appears multiple times.
+The Vulkan spec states: The sType value of each structure in the pNext chain must be unique, with the exception of structures of type VkDeviceDeviceMemoryReportCreateInfoEXT or VkDevicePrivateDataCreateInfo (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/devsandqueues.html#VUID-VkDeviceCreateInfo-sType-unique)
+ERROR: VUID-VkDeviceCreateInfo-pNext-pNext 
+ --> vkCreateDevice(): pCreateInfo->pNext chain includes a structure with unknown VkStructureType (71398464).
+pNext -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO] -> [VkPhysicalDeviceFeatures2] -> [VkPhysicalDeviceVulkan11Features] -> [VkPhysicalDeviceVulkan12Features] -> [VkSubmitInfo] -> [Unknown VkStructureType 7530344] -> [Unknown VkStructureType 71398464] -> [Unknown VkStructureType 71398464]
+This error is based on the Valid Usage documentation for version 313 of the Vulkan header.  It is possible that you are using a struct from a private extension or an extension that was added to a later version of the Vulkan header, in which case the use of pCreateInfo->pNext is undefined and may not work correctly with validation enabled.
+The Vulkan spec states: Each pNext member of any structure (including this one) in the pNext chain must be either NULL or a pointer to a valid struct for extending VkDeviceCreateInfo (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/devsandqueues.html#VUID-VkDeviceCreateInfo-pNext-pNext)
+Loading File:  C:/Users/chaowei/Desktop/vk_path_tracing_demo/bin_x64/Debug/../../ReSTIR_path_tracer/path_tracer/../media/scenes/fireplace_room/fireplace_room.obj 
+ERROR: VUID-VkGraphicsPipelineCreateInfo-renderPass-07609 
+ --> vkCreateGraphicsPipelines(): pCreateInfos[0].pColorBlendState->attachmentCount (1) is different than VkRenderPass 0x4e000000004e pSubpasses[0].colorAttachmentCount (4).
+The Vulkan spec states: If renderPass is not VK_NULL_HANDLE, the pipeline is being created with fragment output interface state, the pColorBlendState pointer is not NULL, the attachmentCount member of pColorBlendState is not ignored, and the subpass uses color attachments, the attachmentCount member of pColorBlendState must be equal to the colorAttachmentCount used to create subpass (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/pipelines.html#VUID-VkGraphicsPipelineCreateInfo-renderPass-07609)
+ERROR: VUID-VkGraphicsPipelineCreateInfo-renderPass-07609 
+ --> vkCreateGraphicsPipelines(): pCreateInfos[0].pColorBlendState->attachmentCount (1) is different than VkRenderPass 0x4e000000004e pSubpasses[0].colorAttachmentCount (4).
+The Vulkan spec states: If renderPass is not VK_NULL_HANDLE, the pipeline is being created with fragment output interface state, the pColorBlendState pointer is not NULL, the attachmentCount member of pColorBlendState is not ignored, and the subpass uses color attachments, the attachmentCount member of pColorBlendState must be equal to the colorAttachmentCount used to create subpass (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/pipelines.html#VUID-VkGraphicsPipelineCreateInfo-renderPass-07609)
+ERROR: VUID-VkDescriptorSetLayoutCreateInfo-binding-00279 
+ --> vkCreateDescriptorSetLayout(): pCreateInfo->pBindings[1].binding is duplicated at pBindings[0].binding.
+The Vulkan spec states: If the perStageDescriptorSet feature is not enabled, or flags does not contain VK_DESCRIPTOR_SET_LAYOUT_CREATE_PER_STAGE_BIT_NV, then the VkDescriptorSetLayoutBinding::binding members of the elements of the pBindings array must each have different values (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/descriptorsets.html#VUID-VkDescriptorSetLayoutCreateInfo-binding-00279)
+ERROR: VUID-vkGetAccelerationStructureBuildSizesKHR-accelerationStructure-08933 
+ --> vkGetAccelerationStructureBuildSizesKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/resources.html#VUID-vkGetAccelerationStructureBuildSizesKHR-accelerationStructure-08933)
+ERROR: VUID-vkCreateAccelerationStructureKHR-accelerationStructure-03611 
+ --> vkCreateAccelerationStructureKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/resources.html#VUID-vkCreateAccelerationStructureKHR-accelerationStructure-03611)
+ERROR: VUID-vkGetAccelerationStructureDeviceAddressKHR-accelerationStructure-08935 
+ --> vkGetAccelerationStructureDeviceAddressKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/resources.html#VUID-vkGetAccelerationStructureDeviceAddressKHR-accelerationStructure-08935)
+ERROR: VUID-vkCmdBuildAccelerationStructuresKHR-accelerationStructure-08923 
+ --> vkCmdBuildAccelerationStructuresKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/accelstructures.html#VUID-vkCmdBuildAccelerationStructuresKHR-accelerationStructure-08923)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-10754 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR when the device does not have accelerationStructure feature enabled.
+The Vulkan spec states: If the accelerationStructure feature is not enabled, srcStageMask must not contain VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-10754)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-10754 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR when the device does not have accelerationStructure feature enabled.
+The Vulkan spec states: If the accelerationStructure feature is not enabled, dstStageMask must not contain VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-10754)
+ERROR: VUID-vkGetAccelerationStructureDeviceAddressKHR-accelerationStructure-08935 
+ --> vkGetAccelerationStructureDeviceAddressKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/resources.html#VUID-vkGetAccelerationStructureDeviceAddressKHR-accelerationStructure-08935)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-10754 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR when the device does not have accelerationStructure feature enabled.
+The Vulkan spec states: If the accelerationStructure feature is not enabled, srcStageMask must not contain VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-10754)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-10754 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR when the device does not have accelerationStructure feature enabled.
+The Vulkan spec states: If the accelerationStructure feature is not enabled, dstStageMask must not contain VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-10754)
+ERROR: VUID-vkGetAccelerationStructureBuildSizesKHR-accelerationStructure-08933 
+ --> vkGetAccelerationStructureBuildSizesKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/resources.html#VUID-vkGetAccelerationStructureBuildSizesKHR-accelerationStructure-08933)
+ERROR: VUID-vkCreateAccelerationStructureKHR-accelerationStructure-03611 
+ --> vkCreateAccelerationStructureKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/resources.html#VUID-vkCreateAccelerationStructureKHR-accelerationStructure-03611)
+ERROR: VUID-vkGetAccelerationStructureDeviceAddressKHR-accelerationStructure-08935 
+ --> vkGetAccelerationStructureDeviceAddressKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/resources.html#VUID-vkGetAccelerationStructureDeviceAddressKHR-accelerationStructure-08935)
+ERROR: VUID-vkCmdBuildAccelerationStructuresKHR-accelerationStructure-08923 
+ --> vkCmdBuildAccelerationStructuresKHR(): accelerationStructure feature was not enabled.
+The Vulkan spec states: The VkPhysicalDeviceAccelerationStructureFeaturesKHR::accelerationStructure feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/accelstructures.html#VUID-vkCmdBuildAccelerationStructuresKHR-accelerationStructure-08923)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-10754 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR when the device does not have accelerationStructure feature enabled.
+The Vulkan spec states: If the accelerationStructure feature is not enabled, srcStageMask must not contain VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-10754)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-10754 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR when the device does not have accelerationStructure feature enabled.
+The Vulkan spec states: If the accelerationStructure feature is not enabled, dstStageMask must not contain VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-10754)
+ERROR: VUID-RuntimeSpirv-shaderSubgroupClock-06267 
+ --> vkCreateShaderModule(): SPIR-V uses OpReadClockKHR with a Subgroup scope but shaderSubgroupClock was not enabled.
+%124 = OpReadClockKHR %122 %123
+Error occurred at C:/Users/chaowei/Desktop/vk_path_tracing_demo/ReSTIR_path_tracer/path_tracer/shaders/raytrace.rgen:28
+
+  uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, int(clockARB()));
+
+The Vulkan spec states: If the shaderSubgroupClock feature is not enabled, the Subgroup scope must not be used for OpReadClockKHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestappendices/spirvenv.html#VUID-RuntimeSpirv-shaderSubgroupClock-06267)
+ERROR: VUID-VkShaderModuleCreateInfo-pCode-08740 
+ --> vkCreateShaderModule(): SPIR-V Capability RayTracingKHR was declared, but one of the following requirements is required (VkPhysicalDeviceRayTracingPipelineFeaturesKHR::rayTracingPipeline).
+The Vulkan spec states: If pCode is a pointer to SPIR-V code, and pCode declares any of the capabilities listed in the SPIR-V Environment appendix, one of the corresponding requirements must be satisfied (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/shaders.html#VUID-VkShaderModuleCreateInfo-pCode-08740)
+ERROR: VUID-VkShaderModuleCreateInfo-pCode-08740 
+ --> vkCreateShaderModule(): SPIR-V Capability RayTracingKHR was declared, but one of the following requirements is required (VkPhysicalDeviceRayTracingPipelineFeaturesKHR::rayTracingPipeline).
+The Vulkan spec states: If pCode is a pointer to SPIR-V code, and pCode declares any of the capabilities listed in the SPIR-V Environment appendix, one of the corresponding requirements must be satisfied (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/shaders.html#VUID-VkShaderModuleCreateInfo-pCode-08740)
+ERROR: VUID-VkShaderModuleCreateInfo-pCode-08740 
+ --> vkCreateShaderModule(): SPIR-V Capability RayTracingKHR was declared, but one of the following requirements is required (VkPhysicalDeviceRayTracingPipelineFeaturesKHR::rayTracingPipeline).
+The Vulkan spec states: If pCode is a pointer to SPIR-V code, and pCode declares any of the capabilities listed in the SPIR-V Environment appendix, one of the corresponding requirements must be satisfied (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/shaders.html#VUID-VkShaderModuleCreateInfo-pCode-08740)
+ERROR: VUID-VkShaderModuleCreateInfo-pCode-08740 
+ --> vkCreateShaderModule(): SPIR-V Capability RayQueryKHR was declared, but one of the following requirements is required (VkPhysicalDeviceRayQueryFeaturesKHR::rayQuery).
+The Vulkan spec states: If pCode is a pointer to SPIR-V code, and pCode declares any of the capabilities listed in the SPIR-V Environment appendix, one of the corresponding requirements must be satisfied (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/shaders.html#VUID-VkShaderModuleCreateInfo-pCode-08740)
+ERROR: VUID-VkShaderModuleCreateInfo-pCode-08740 
+ --> vkCreateShaderModule(): SPIR-V Capability RayTracingKHR was declared, but one of the following requirements is required (VkPhysicalDeviceRayTracingPipelineFeaturesKHR::rayTracingPipeline).
+The Vulkan spec states: If pCode is a pointer to SPIR-V code, and pCode declares any of the capabilities listed in the SPIR-V Environment appendix, one of the corresponding requirements must be satisfied (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/shaders.html#VUID-VkShaderModuleCreateInfo-pCode-08740)
+ERROR: VUID-vkCreateRayTracingPipelinesKHR-rayTracingPipeline-03586 
+ --> vkCreateRayTracingPipelinesKHR(): the rayTracingPipeline feature was not enabled.
+The Vulkan spec states: The rayTracingPipeline feature must be enabled (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/pipelines.html#VUID-vkCreateRayTracingPipelinesKHR-rayTracingPipeline-03586)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-07949 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, srcStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-07949 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, dstStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-07949 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, srcStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-07949 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, dstStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-07949 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, srcStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-07949 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, dstStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-07949 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, srcStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-07949 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, dstStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-07949 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, srcStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-07949 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, dstStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-07949 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, srcStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-07949 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, dstStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-07949)
 ERROR: VUID-vkQueueSubmit-pSignalSemaphores-00067 
- --> vkQueueSubmit(): pSubmits[0].pSignalSemaphores[0] (VkSemaphore 0xf000000000f[swapchainWrittenSemaphore:1]) is being signaled by VkQueue 0x7133620[queueGCT], but it may still be in use by VkSwapchainKHR 0x50000000005[SwapChain::m_swapchain].
-Here are the most recently acquired image indices: 1, 2, 0, [1], 2, 0, 0, 0.
+ --> vkQueueSubmit(): pSubmits[0].pSignalSemaphores[0] (VkSemaphore 0xf000000000f[swapchainWrittenSemaphore:1]) is being signaled by VkQueue 0x71e8620[queueGCT], but it may still be in use by VkSwapchainKHR 0x50000000005[SwapChain::m_swapchain].
+Here are the most recently acquired image indices: 0, [1], 2, 0, 0, 0.
 (brackets mark the last use of VkSemaphore 0xf000000000f[swapchainWrittenSemaphore:1] in a presentation operation)
-Swapchain 
+Swapchain image 1 was presented but was not re-acquired, so VkSemaphore 0xf000000000f[swapchainWrittenSemaphore:1] may still be in use and cannot be safely reused with image index 0.
+Vulkan insight: One solution is to assign each image its own semaphore. This also handles the case where vkAcquireNextImageKHR returns the same index twice in a row. Here are some common methods to ensure that a semaphore passed to vkQueuePresentKHR is not in use and can be safely reused:
+	a) Use a separate semaphore per swapchain image. Index these semaphores using the index of the acquired image.
+	b) Consider the VK_EXT_swapchain_maintenance1 extension. It allows using a VkFence with the presentation operation.
+The Vulkan spec states: Each binary semaphore element of the pSignalSemaphores member of any element of pSubmits must be unsignaled when the semaphore signal operation it defines is executed on the device (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/cmdbuffers.html#VUID-vkQueueSubmit-pSignalSemaphores-00067)
+ERROR: VUID-vkCmdPipelineBarrier-srcStageMask-07949 
+ --> vkCmdPipelineBarrier(): srcStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, srcStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-srcStageMask-07949)
+ERROR: VUID-vkCmdPipelineBarrier-dstStageMask-07949 
+ --> vkCmdPipelineBarrier(): dstStageMask includes VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR when the device does not have rayTracing feature enabled.
+The Vulkan spec states: If neither the VK_NV_ray_tracing extension or the rayTracingPipeline feature are enabled, dstStageMask must not contain VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR (https://vulkan.lunarg.com/doc/view/1.4.313.0/windows/antora/spec/latestchapters/synchronization.html#VUID-vkCmdPipelineBarrier-dstStageMask-07949)
+ERROR: VUID-vkQueueSubmit-pSignalSemaphores-00067 
+ --> vkQueueSubmit(): pSubmits[0].pSignalSemaphores[0] (VkSemaphore 0x110000000011[swapchainWrittenSemaphore:2]) is being signaled by VkQueue 0x71e8620[queueGCT], but it may still be in use by VkSwapchainKHR 0x50000000005[SwapChain::m_swapchain].
+Here are the most recently acquired image indices: 0, 1, [2], 0, 0, 0, 0.
+(brackets mark the last use of VkSemaphore 0x110000000011[swapchainWrittenSemaphore:2] in a presentation operation)
+Swapchain image 2 was presented but was not re-acquired, so VkSemaphore 0x110000000011[swapchainWrittenSemaphore:2] may still be in use and cannot be safely reused with image index 0.
+Vulkan insight: One solution is to assign each image its own semaphore. This also handles the case where vkAcquireNextImageKHR returns the same index twice in a row. Here are some common methods to ensure that a semaphore passed to vkQueuePresentKHR is not in use and can be safely reused:
+	a) Use a separate semaphore per swapchain image. Index these semaphores using the index of the acquired image.
+	b) Consider the VK_EXT_swapchain_maintenance1 extension. It allows using a VkFence with the presentation operation.
+The Vulkan spec states: Each binary semaphore element of the pSignalSemaphores member of any element of pSubmi

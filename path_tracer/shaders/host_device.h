@@ -31,13 +31,17 @@ START_BINDING(RtxBindings)
   eOutImage = 1   // Ray tracer output image
 END_BINDING();
 
+START_BINDING(ReSTIR)
+  eReservoirCur =0,     // SSBO
+  eReservoirPrev =1     // SSBO
+END_BINDING();
 
 START_BINDING(PathTracingAlgos)
   NEE                       =0,
   NEE_temporal_reuse        =1,
   RIS                       =2,
   RIS_spatial_reuse         =3,
-  RIS_spatiotempral_reuse   =4,
+  RIS_spatiotemporal_reuse   =4,
 
   PathTracingAlgos_Count    =5
 END_BINDING();
@@ -120,6 +124,23 @@ struct EmitTriangle
   vec3 m_vpos[3];   // world position of vertex
   vec3 m_normal;    // point to the front face
   vec3 m_radiance;  // radiance value for each direction
+};
+
+#define MAX_WEIGHT 100000  // max weight for Reservoir.totalWeight
+
+struct LightSample
+{
+  vec3 lightPos;  // the preserved sample
+  vec3 lightNrm;
+  vec3 radiance;
+};
+
+struct Reservoir
+{
+  LightSample keptSample;
+  float       totalWeight;  // current weight
+  uint        sampleNum;    // seen this much of samples so far
+  float       targetPdf;    // (target pdf value)
 };
 
 

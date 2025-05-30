@@ -179,6 +179,7 @@ void HelloVulkan::createGraphicsPipeline()
   gpb.depthStencilState.depthTestEnable = true;
   gpb.addShader(nvh::loadFile("spv/vert_shader.vert.spv", true, paths, true), VK_SHADER_STAGE_VERTEX_BIT);
   gpb.addShader(nvh::loadFile("spv/frag_shader.frag.spv", true, paths, true), VK_SHADER_STAGE_FRAGMENT_BIT);
+  // ---- vertex data location ---
   gpb.addBindingDescription({0, sizeof(VertexObj)});
   gpb.addAttributeDescriptions({
       {0, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj, pos))},
@@ -187,22 +188,33 @@ void HelloVulkan::createGraphicsPipeline()
       {3, 0, VK_FORMAT_R32G32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj, texCoord))},
   });
 
+  // color blend 配置
+  std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(4);
+  gpb.setBlendAttachmentCount(colorBlendAttachments.size());
+  for(int i = 0; i < colorBlendAttachments.size(); ++i)
+  {
+    colorBlendAttachments[i] = {.blendEnable    = VK_FALSE,  // 禁用
+                                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
+                                                  | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
+    gpb.setBlendAttachmentState(i, colorBlendAttachments[i]);
+  }
+
   m_graphicsPipeline = gpb.createPipeline();
   m_debug.setObjectName(m_graphicsPipeline, "Graphics");
 }
 
-void HelloVulkan::createGraphicsPipeline2()
-{
-  // Creating the Pipeline
-  std::vector<std::string>                paths = defaultSearchPaths;
-  nvvk::GraphicsPipelineGeneratorCombined gpb(m_device, m_pipelineLayout, m_offscreenRenderPass);
-  gpb.depthStencilState.depthTestEnable = true;
-  gpb.addShader(nvh::loadFile("spv/emit_test.vert.spv", true, paths, true), VK_SHADER_STAGE_VERTEX_BIT);
-  gpb.addShader(nvh::loadFile("spv/emit_test.frag.spv", true, paths, true), VK_SHADER_STAGE_FRAGMENT_BIT);
+// void HelloVulkan::createGraphicsPipeline2()
+// {
+//   // Creating the Pipeline
+//   std::vector<std::string>                paths = defaultSearchPaths;
+//   nvvk::GraphicsPipelineGeneratorCombined gpb(m_device, m_pipelineLayout, m_offscreenRenderPass);
+//   gpb.depthStencilState.depthTestEnable = true;
+//   gpb.addShader(nvh::loadFile("spv/emit_test.vert.spv", true, paths, true), VK_SHADER_STAGE_VERTEX_BIT);
+//   gpb.addShader(nvh::loadFile("spv/emit_test.frag.spv", true, paths, true), VK_SHADER_STAGE_FRAGMENT_BIT);
 
-  m_graphicsPipeline2 = gpb.createPipeline();
-  m_debug.setObjectName(m_graphicsPipeline2, "Graphics2");
-}
+//   m_graphicsPipeline2 = gpb.createPipeline();
+//   m_debug.setObjectName(m_graphicsPipeline2, "Graphics2");
+// }
 
 //--------------------------------------------------------------------------------------------------
 // Loading the OBJ file and setting up all buffers
@@ -375,7 +387,6 @@ void HelloVulkan::createObjDescriptionBuffer()
   m_alloc.finalizeAndReleaseStaging();
   m_debug.setObjectName(m_bObjDesc.buffer, "ObjDescs");
 }
-
 //--------------------------------------------------------------------------------------------------
 // Creating all textures and samplers
 //
@@ -454,8 +465,9 @@ void HelloVulkan::createTextureImages(const VkCommandBuffer& cmdBuf, const std::
 //
 void HelloVulkan::destroyResources()
 {
+
   vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
-  vkDestroyPipeline(m_device, m_graphicsPipeline2, nullptr);
+  // vkDestroyPipeline(m_device, m_graphicsPipeline2, nullptr);
   vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
 
   vkDestroyDescriptorPool(m_device, m_descPool, nullptr);
@@ -463,6 +475,8 @@ void HelloVulkan::destroyResources()
 
   m_alloc.destroy(m_bGlobals);
   m_alloc.destroy(m_bObjDesc);
+  m_alloc.destroy(m_ReStirBufferCur);
+  m_alloc.destroy(m_ReStirBufferPrev);
 
   for(auto& m : m_objModel)
   {
@@ -477,6 +491,8 @@ void HelloVulkan::destroyResources()
     m_alloc.destroy(t);
   }
 
+  vkDestroyDescriptorPool(m_device, m_ReStirDescPool, nullptr);
+  vkDestroyDescriptorSetLayout(m_device, m_ReStirDescSetLayout, nullptr);
   m_alloc.destroy(m_emitterHandles.emittersBuffer);
   m_alloc.destroy(m_emitterHandles.emittersPrefixSumBuffer);
 
@@ -484,6 +500,10 @@ void HelloVulkan::destroyResources()
   //#Post
   m_alloc.destroy(m_offscreenColor);
   m_alloc.destroy(m_offscreenDepth);
+  m_alloc.destroy(m_gPosition);
+  m_alloc.destroy(m_gAlbedo);
+  m_alloc.destroy(m_gNormal);
+
   vkDestroyPipeline(m_device, m_postPipeline, nullptr);
   vkDestroyPipelineLayout(m_device, m_postPipelineLayout, nullptr);
   vkDestroyDescriptorPool(m_device, m_postDescPool, nullptr);
@@ -520,7 +540,7 @@ void HelloVulkan::rasterize(const VkCommandBuffer& cmdBuf)
   vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descSet, 0, nullptr);
 
 
-  for(const HelloVulkan::ObjInstance& inst : m_instances)
+  for(const ObjInstance& inst : m_instances)
   {
     auto& model            = m_objModel[inst.objIndex];
     m_pcRaster.objIndex    = inst.objIndex;  // Telling which object is drawn
@@ -541,38 +561,40 @@ void HelloVulkan::rasterize(const VkCommandBuffer& cmdBuf)
 }
 
 
-void HelloVulkan::rasterize2(const VkCommandBuffer& cmdBuf)
-{
-  VkDeviceSize offset{0};
+// void HelloVulkan::rasterize2(const VkCommandBuffer& cmdBuf)
+// {
+//   VkDeviceSize offset{0};
 
-  m_debug.beginLabel(cmdBuf, "Rasterize2");
+//   m_debug.beginLabel(cmdBuf, "Rasterize2");
 
-  // Dynamic Viewport
-  setViewport(cmdBuf);
-  m_pcRaster.emitterTriangleNum      = m_pcRay.emitterTriangleNum;
-  m_pcRaster.emitterPrefixSumAddress = m_pcRay.emitterPrefixSumAddress;
-  m_pcRaster.emitterTrianglesAddress = m_pcRay.emitterTrianglesAddress;
+//   // Dynamic Viewport
+//   setViewport(cmdBuf);
+//   m_pcRaster.emitterTriangleNum      = m_pcRay.emitterTriangleNum;
+//   m_pcRaster.emitterPrefixSumAddress = m_pcRay.emitterPrefixSumAddress;
+//   m_pcRaster.emitterTrianglesAddress = m_pcRay.emitterTrianglesAddress;
 
-  vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline2);
-  vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descSet, 0, nullptr);
+//   vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline2);
+//   vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descSet, 0, nullptr);
 
-  // vkCmdPushConstants(cmdBuf, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(m_pcRay), &m_pcRay);
-  vkCmdPushConstants(cmdBuf, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-                     sizeof(PushConstantRaster), &m_pcRaster);
-  vkCmdDraw(cmdBuf, m_pcRay.emitterTriangleNum * 3, 1, 0, 0);
+//   // vkCmdPushConstants(cmdBuf, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(m_pcRay), &m_pcRay);
+//   vkCmdPushConstants(cmdBuf, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+//                      sizeof(PushConstantRaster), &m_pcRaster);
+//   vkCmdDraw(cmdBuf, m_pcRay.emitterTriangleNum * 3, 1, 0, 0);
 
-  m_debug.endLabel(cmdBuf);
-}
+//   m_debug.endLabel(cmdBuf);
+// }
 
 //--------------------------------------------------------------------------------------------------
 // Handling resize of the window
 //
 void HelloVulkan::onResize(int /*w*/, int /*h*/)
 {
-  createOffscreenRender();
-  updatePostDescriptorSet();
-  updateRtDescriptorSet();
-  resetFrame();
+  createOffscreenRenderPass();   // update offscreen graphic render pass, vkimages ,frame buffers
+  updatePostDescriptorSet();     // update post graphic pipeline's descriptor set: color image's size
+  updateRtDescriptorSet();       // update ray tracing pipeline's out put descriptor : color image's size
+  updateReStir_DescriptorSet();  // update restir ssbo
+
+  resetFrame();  // reset frame num;
 }
 
 
@@ -584,71 +606,99 @@ void HelloVulkan::onResize(int /*w*/, int /*h*/)
 //--------------------------------------------------------------------------------------------------
 // Creating an offscreen frame buffer and the associated render pass
 //
-void HelloVulkan::createOffscreenRender()
+void HelloVulkan::createOffscreenRenderPass()
 {
+
   m_alloc.destroy(m_offscreenColor);
   m_alloc.destroy(m_offscreenDepth);
+  m_alloc.destroy(m_gPosition);
+  m_alloc.destroy(m_gNormal);
+  m_alloc.destroy(m_gAlbedo);
+  vkDestroyFramebuffer(m_device, m_offscreenFramebuffer, nullptr);
 
-  // Creating the color image
+  // 创建 Color/HDR, Position, Normal, Albedo 图像
+  auto makeGbuf = [&](VkFormat fmt) -> nvvk::Texture {
+    auto imgCI = nvvk::makeImage2DCreateInfo(m_size, fmt,
+                                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+                                                 | VK_IMAGE_USAGE_STORAGE_BIT);  // 允许 CS / RT 读写
+
+    nvvk::Image           image = m_alloc.createImage(imgCI);
+    VkImageViewCreateInfo ivCI  = nvvk::makeImageViewCreateInfo(image.image, imgCI);
+    VkSamplerCreateInfo   sampCI{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+
+    nvvk::Texture tex          = m_alloc.createTexture(image, ivCI, sampCI);
+    tex.descriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    return tex;
+  };
+
+  m_offscreenColor = makeGbuf(m_offscreenColorFormat);  // HDR
+  m_gPosition      = makeGbuf(m_offscreenWorldPosFormat);
+  m_gNormal        = makeGbuf(m_offscreenNormFormat);
+  m_gAlbedo        = makeGbuf(m_offscreenAlbedoFormat);
+
+
+  // 2) 创建 Depth ----------------------------------------------------------
   {
-    auto colorCreateInfo = nvvk::makeImage2DCreateInfo(m_size, m_offscreenColorFormat,
-                                                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-                                                           | VK_IMAGE_USAGE_STORAGE_BIT);
+    auto depthCI = nvvk::makeImage2DCreateInfo(m_size, m_offscreenDepthFormat,
+                                               VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
+    nvvk::Image image = m_alloc.createImage(depthCI);
 
-    nvvk::Image           image  = m_alloc.createImage(colorCreateInfo);
-    VkImageViewCreateInfo ivInfo = nvvk::makeImageViewCreateInfo(image.image, colorCreateInfo);
-    VkSamplerCreateInfo   sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-    m_offscreenColor                        = m_alloc.createTexture(image, ivInfo, sampler);
-    m_offscreenColor.descriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    VkImageViewCreateInfo viewCI{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    viewCI.viewType         = VK_IMAGE_VIEW_TYPE_2D;
+    viewCI.format           = m_offscreenDepthFormat;
+    viewCI.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
+    viewCI.image            = image.image;
+
+    m_offscreenDepth = m_alloc.createTexture(image, viewCI);
   }
 
-  // Creating the depth buffer
-  auto depthCreateInfo = nvvk::makeImage2DCreateInfo(m_size, m_offscreenDepthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-  {
-    nvvk::Image image = m_alloc.createImage(depthCreateInfo);
-
-
-    VkImageViewCreateInfo depthStencilView{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    depthStencilView.viewType         = VK_IMAGE_VIEW_TYPE_2D;
-    depthStencilView.format           = m_offscreenDepthFormat;
-    depthStencilView.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
-    depthStencilView.image            = image.image;
-
-    m_offscreenDepth = m_alloc.createTexture(image, depthStencilView);
-  }
-
-  // Setting the image layout for both color and depth
+  // 3) 初始布局 → GENERAL / DEPTH_ATTACHMENT_OPTIMAL ----------------------
   {
     nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
-    auto              cmdBuf = genCmdBuf.createCommandBuffer();
-    nvvk::cmdBarrierImageLayout(cmdBuf, m_offscreenColor.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-    nvvk::cmdBarrierImageLayout(cmdBuf, m_offscreenDepth.image, VK_IMAGE_LAYOUT_UNDEFINED,
+    auto              cmd = genCmdBuf.createCommandBuffer();
+
+    auto toGeneral = [&](const nvvk::Texture& t) {
+      nvvk::cmdBarrierImageLayout(cmd, t.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    };
+    toGeneral(m_offscreenColor);
+    toGeneral(m_gPosition);
+    toGeneral(m_gNormal);
+    toGeneral(m_gAlbedo);
+
+    nvvk::cmdBarrierImageLayout(cmd, m_offscreenDepth.image, VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    genCmdBuf.submitAndWait(cmdBuf);
+    genCmdBuf.submitAndWait(cmd);
   }
-
-  // Creating a renderpass for the offscreen
+  // 4) RenderPass：4×Color + Depth ----------------------------------------
   if(!m_offscreenRenderPass)
   {
-    m_offscreenRenderPass = nvvk::createRenderPass(m_device, {m_offscreenColorFormat}, m_offscreenDepthFormat, 1, true,
-                                                   true, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
+    std::vector<VkFormat> colorFmts = {m_offscreenColorFormat, m_offscreenWorldPosFormat, m_offscreenNormFormat, m_offscreenAlbedoFormat};
+
+    // nvvk helper: clearColor=true, clearDepth=true, sampleCount=1,
+    // initialLayout & finalLayout 均为 GENERAL（color）/ GENERAL→read
+    m_offscreenRenderPass = nvvk::createRenderPass(m_device, colorFmts, m_offscreenDepthFormat, 1, /*samples*/
+                                                   true,                                           /*clearColor*/
+                                                   true,                                           /*clearDepth*/
+                                                   VK_IMAGE_LAYOUT_GENERAL,   // initial & final for color
+                                                   VK_IMAGE_LAYOUT_GENERAL);  // 可直接供后续 shader 读取
   }
 
+  // 5) Framebuffer ---------------------------------------------------------
+  std::array<VkImageView, 5> atts = {m_offscreenColor.descriptor.imageView, m_gPosition.descriptor.imageView,
+                                     m_gNormal.descriptor.imageView, m_gAlbedo.descriptor.imageView,
+                                     m_offscreenDepth.descriptor.imageView};
 
-  // Creating the frame buffer for offscreen
-  std::vector<VkImageView> attachments = {m_offscreenColor.descriptor.imageView, m_offscreenDepth.descriptor.imageView};
+  VkFramebufferCreateInfo fbCI{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+  fbCI.renderPass      = m_offscreenRenderPass;
+  fbCI.attachmentCount = static_cast<uint32_t>(atts.size());
+  fbCI.pAttachments    = atts.data();
+  fbCI.width           = m_size.width;
+  fbCI.height          = m_size.height;
+  fbCI.layers          = 1;
 
-  vkDestroyFramebuffer(m_device, m_offscreenFramebuffer, nullptr);
-  VkFramebufferCreateInfo info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
-  info.renderPass      = m_offscreenRenderPass;
-  info.attachmentCount = 2;
-  info.pAttachments    = attachments.data();
-  info.width           = m_size.width;
-  info.height          = m_size.height;
-  info.layers          = 1;
-  vkCreateFramebuffer(m_device, &info, nullptr, &m_offscreenFramebuffer);
+  NVVK_CHECK(vkCreateFramebuffer(m_device, &fbCI, nullptr, &m_offscreenFramebuffer));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -803,7 +853,7 @@ void HelloVulkan::createTopLevelAS()
 {
   std::vector<VkAccelerationStructureInstanceKHR> tlas;
   tlas.reserve(m_instances.size());
-  for(const HelloVulkan::ObjInstance& inst : m_instances)
+  for(const ObjInstance& inst : m_instances)
   {
     VkAccelerationStructureInstanceKHR rayInst{};
     rayInst.transform                      = nvvk::toTransformMatrixKHR(inst.transform);  // Position of the instance
@@ -861,6 +911,96 @@ void HelloVulkan::updateRtDescriptorSet()
   VkDescriptorImageInfo imageInfo{{}, m_offscreenColor.descriptor.imageView, VK_IMAGE_LAYOUT_GENERAL};
   VkWriteDescriptorSet  wds = m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, RtxBindings::eOutImage, &imageInfo);
   vkUpdateDescriptorSets(m_device, 1, &wds, 0, nullptr);
+}
+
+
+/**
+ * @brief Create 2 storage buffers containing the description of the ReSTIR structure
+ * 
+ */
+void HelloVulkan::createReStir_StorageBuffer()
+{
+  size_t       reservoirStride = sizeof(Reservoir);
+  size_t       reservoirCount  = m_size.width * m_size.height;  // one per pixel
+  VkDeviceSize bufSize         = reservoirStride * reservoirCount;
+
+  VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  // CS / RT read-write
+                             VK_BUFFER_USAGE_TRANSFER_DST_BIT |    // 清空 / ping-pong copy
+                             VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;  // 若未来 inline RT 用地址
+  VkBufferCreateInfo bci{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+  bci.size  = bufSize;
+  bci.usage = usage;
+
+  m_ReStirBufferCur  = m_alloc.createBuffer(bci,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);  // 驻 GPU，本地访问最快
+  m_ReStirBufferPrev = m_alloc.createBuffer(bci, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+}
+
+/**
+ * @brief create and write desc set for restir SSBO
+ * 
+ */
+void HelloVulkan::createReStir_DescriptorSet()
+{
+  // add binding
+  m_ReStirDescSetLayoutBind.addBinding(ReSTIR::eReservoirCur, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
+                                       VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+  m_ReStirDescSetLayoutBind.addBinding(ReSTIR::eReservoirPrev, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
+                                       VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+
+  m_ReStirDescPool      = m_ReStirDescSetLayoutBind.createPool(m_device);
+  m_ReStirDescSetLayout = m_ReStirDescSetLayoutBind.createLayout(m_device);
+
+  // create desc set
+  VkDescriptorSetAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+  allocateInfo.descriptorPool     = m_ReStirDescPool;
+  allocateInfo.descriptorSetCount = 1;
+  allocateInfo.pSetLayouts        = &m_ReStirDescSetLayout;
+  vkAllocateDescriptorSets(m_device, &allocateInfo, &m_ReStirDescSet);
+
+  // write data to desc set
+
+  VkDescriptorBufferInfo curInfo{m_ReStirBufferCur.buffer, 0, VK_WHOLE_SIZE};
+  VkDescriptorBufferInfo prevInfo{m_ReStirBufferPrev.buffer, 0, VK_WHOLE_SIZE};
+
+  std::array<VkWriteDescriptorSet, 2> writes;
+  writes[0] = m_ReStirDescSetLayoutBind.makeWrite(m_ReStirDescSet, ReSTIR::eReservoirCur, &curInfo);
+  writes[1] = m_ReStirDescSetLayoutBind.makeWrite(m_ReStirDescSet, ReSTIR::eReservoirPrev, &prevInfo);
+  vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+}
+
+void HelloVulkan::updateReStir_DescriptorSet()
+{
+  vkDeviceWaitIdle(m_device);  // 防止gpu正在使用旧资源
+  // ─── 重新生成 ReSTIR Reservoir Buffer ───
+  {
+    uint32_t     pixCount  = m_size.width * m_size.height;
+    uint32_t     strideGPU = sizeof(Reservoir);  // scalar 布局下 = 48
+    VkDeviceSize bufSz     = strideGPU * pixCount;
+
+    m_alloc.destroy(m_ReStirBufferPrev);
+    m_alloc.destroy(m_ReStirBufferCur);
+
+    // Device-local / Storage
+    VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+                               | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+    auto createResBuf = [&](nvvk::Buffer& dst) {
+      dst = m_alloc.createBuffer(bufSz, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    };
+    createResBuf(m_ReStirBufferPrev);
+    createResBuf(m_ReStirBufferCur);
+  }
+
+  // write data to desc set
+
+  VkDescriptorBufferInfo curInfo{m_ReStirBufferCur.buffer, 0, VK_WHOLE_SIZE};
+  VkDescriptorBufferInfo prevInfo{m_ReStirBufferPrev.buffer, 0, VK_WHOLE_SIZE};
+
+  std::array<VkWriteDescriptorSet, 2> writes;
+  writes[0] = m_ReStirDescSetLayoutBind.makeWrite(m_ReStirDescSet, ReSTIR::eReservoirCur, &curInfo);
+  writes[1] = m_ReStirDescSetLayoutBind.makeWrite(m_ReStirDescSet, ReSTIR::eReservoirPrev, &prevInfo);
+  vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
 
 

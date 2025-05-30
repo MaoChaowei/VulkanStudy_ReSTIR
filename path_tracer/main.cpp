@@ -1,29 +1,4 @@
-/*
- * Copyright (c) 2014-2021, NVIDIA CORPORATION.  All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-FileCopyrightText: Copyright (c) 2014-2021 NVIDIA CORPORATION
- * SPDX-License-Identifier: Apache-2.0
- */
-
-
-// ImGui - standalone example application for Glfw + Vulkan, using programmable
-// pipeline If you are new to ImGui, see examples/README.txt and documentation
-// at the top of imgui.cpp.
-
 #include <array>
-
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
@@ -39,12 +14,12 @@
 #include "nvvk/context_vk.hpp"
 #include <unordered_map>
 
-//////////////////////////////////////////////////////////////////////////
-#define UNUSED(x) (void)(x)
-//////////////////////////////////////////////////////////////////////////
 
-// Default search path for shaders
+#define UNUSED(x) (void)(x)
+
 std::vector<std::string> defaultSearchPaths;
+static int const         WINDOW_WIDTH  = 1280;
+static int const         WINDOW_HEIGHT = 720;
 
 
 // GLFW Callback functions
@@ -53,7 +28,6 @@ static void onErrorCallback(int error, const char* description)
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-// Extra UI
 void renderUI(HelloVulkan& helloVk)
 {
   helloVk.m_frameChange |= ImGuiH::CameraWidget();
@@ -94,58 +68,16 @@ void renderUI(HelloVulkan& helloVk)
   }
 }
 
-//////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////
-static int const SAMPLE_WIDTH  = 1280;
-static int const SAMPLE_HEIGHT = 720;
-
-
-//--------------------------------------------------------------------------------------------------
-// Application Entry
-//
-int main(int argc, char** argv)
+void vkContextInit(nvvk::Context& vkctx)
 {
-  UNUSED(argc);
-
-  // Setup GLFW window
-  glfwSetErrorCallback(onErrorCallback);
-  if(!glfwInit())
-  {
-    return 1;
-  }
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  GLFWwindow* window = glfwCreateWindow(SAMPLE_WIDTH, SAMPLE_HEIGHT, PROJECT_NAME, nullptr, nullptr);
-
-
-  // Setup camera
-  CameraManip.setWindowSize(SAMPLE_WIDTH, SAMPLE_HEIGHT);
-  CameraManip.setLookat(glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
-
-  // Setup Vulkan
-  if(!glfwVulkanSupported())
-  {
-    printf("GLFW: Vulkan Not Supported\n");
-    return 1;
-  }
-
-  // setup some basic things for the sample, logging file for example
-  NVPSystem system(PROJECT_NAME);
-
-  // Search path for shaders and other media
-  defaultSearchPaths = {
-      NVPSystem::exePath() + PROJECT_RELDIRECTORY,
-      NVPSystem::exePath() + PROJECT_RELDIRECTORY "..",
-      std::string(PROJECT_NAME),
-  };
-
+  // set extensions
+  nvvk::ContextCreateInfo contextInfo;
   // Vulkan required extensions
   assert(glfwVulkanSupported() == 1);
   uint32_t count{0};
   auto     reqExtensions = glfwGetRequiredInstanceExtensions(&count);
 
   // Requesting Vulkan extensions and layers
-  nvvk::ContextCreateInfo contextInfo;
   contextInfo.setVersion(1, 2);                       // Using Vulkan 1.2
   for(uint32_t ext_id = 0; ext_id < count; ext_id++)  // Adding required extensions (surface, win32, linux, ..)
     contextInfo.addInstanceExtension(reqExtensions[ext_id]);
@@ -164,66 +96,133 @@ int main(int argc, char** argv)
   VkPhysicalDeviceShaderClockFeaturesKHR clockFeature{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR};
   contextInfo.addDeviceExtension(VK_KHR_SHADER_CLOCK_EXTENSION_NAME, false, &clockFeature);
 
-  // Creating Vulkan base application
-  nvvk::Context vkctx{};
+  // context init
   vkctx.initInstance(contextInfo);
-  // Find all compatible devices
-  auto compatibleDevices = vkctx.getCompatibleDevices(contextInfo);
+
+  auto compatibleDevices = vkctx.getCompatibleDevices(contextInfo);  // Find all compatible devices
   assert(!compatibleDevices.empty());
-  // Use a compatible device
-  vkctx.initDevice(compatibleDevices[0], contextInfo);
+  vkctx.initDevice(compatibleDevices[0], contextInfo);  // Use a compatible device
+}
 
-  // Create example
-  HelloVulkan helloVk;
+void sceneLoader(HelloVulkan& helloVk)
+{
+  // Setup camera
+  CameraManip.setWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+  CameraManip.setLookat(glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
 
-  // Window need to be opened to get the surface on which to draw
-  const VkSurfaceKHR surface = helloVk.getVkSurface(vkctx.m_instance, window);
-  vkctx.setGCTQueueWithPresent(surface);
+  std::unordered_map<std::string, glm::mat4> trans;
+  trans["buddha"] = glm::translate(glm::mat4(1.0), glm::vec3(0.39555, 1.07519, 0.44344));
+  trans["buddha"] = glm::rotate(trans["buddha"], 3.14f, glm::vec3(0, 1, 0));
 
-  helloVk.setup(vkctx.m_instance, vkctx.m_device, vkctx.m_physicalDevice, vkctx.m_queueGCT.familyIndex);
-  helloVk.createSwapchain(surface, SAMPLE_WIDTH, SAMPLE_HEIGHT);
-  helloVk.createDepthBuffer();
-  helloVk.createRenderPass();
-  helloVk.createFrameBuffers();
+  trans["dragon"] = glm::translate(glm::mat4(1.0), glm::vec3(0, 1, 0));
+  trans["dragon"] = glm::rotate(trans["dragon"], 3.14f * 0.7f, glm::vec3(0, 1, 0));
+  trans["dragon"] = glm::scale(trans["dragon"], glm::vec3(1.2, 1.2, 1.2));
 
-  // Setup Imgui
-  helloVk.initGUI(0);  // Using sub-pass 0
-
-  // Scene Preparation
+  if(1)
   {
-    std::unordered_map<std::string, glm::mat4> trans;
-    trans["buddha"] = glm::translate(glm::mat4(1.0), glm::vec3(0.39555, 1.07519, 0.44344));
-    trans["buddha"] = glm::rotate(trans["buddha"], 3.14f, glm::vec3(0, 1, 0));
-
-    trans["dragon"] = glm::translate(glm::mat4(1.0), glm::vec3(0, 1, 0));
-    trans["dragon"] = glm::rotate(trans["dragon"], 3.14f * 0.7f, glm::vec3(0, 1, 0));
-    trans["dragon"] = glm::scale(trans["dragon"], glm::vec3(1.2, 1.2, 1.2));
-
-    // helloVk.loadModel(nvh::findFile("media/scenes/fireplace_room/fireplace_room.obj", defaultSearchPaths, true));
-    // CameraManip.setLookat(glm::vec3(4.20767, 1.01458, -3.20028), glm::vec3(-1.06465, 1.35220, 0.32594), glm::vec3(0, 1, 0));
+    helloVk.loadModel(nvh::findFile("media/scenes/fireplace_room/fireplace_room.obj", defaultSearchPaths, true));
+    CameraManip.setLookat(glm::vec3(4.20767, 1.01458, -3.20028), glm::vec3(-1.06465, 1.35220, 0.32594), glm::vec3(0, 1, 0));
+  }
+  else if(1)
+  {
     helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-Lights.obj", defaultSearchPaths, true),
                       glm::rotate(glm::mat4(1.f), 3.14f, glm::vec3(0, 1, 0)));
     helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-CO.obj", defaultSearchPaths, true));
     // helloVk.loadModel(nvh::findFile("media/scenes/buddha/buddha.obj", defaultSearchPaths, true), trans["buddha"]);
     helloVk.loadModel(nvh::findFile("media/scenes/dragon/dragon.obj", defaultSearchPaths, true), trans["dragon"]);
     CameraManip.setLookat(glm::vec3(0.06118, 1.20128, 3.09162), glm::vec3(0.06005, 1.13624, 2.09373), glm::vec3(0, 1, 0));
+  }
+  else
+  {
+    helloVk.loadModel(nvh::findFile("media/scenes/living_room/living_room.obj", defaultSearchPaths, true));
+    CameraManip.setLookat(glm::vec3(2.08361, 1.76848, 5.29191), glm::vec3(1.55202, 1.61265, 4.45936), glm::vec3(0, 1, 0));
+  }
+  helloVk.findAllEmitters();
+}
 
-    // helloVk.loadModel(nvh::findFile("media/scenes/living_room/living_room.obj", defaultSearchPaths, true));
-    // CameraManip.setLookat(glm::vec3(2.08361, 1.76848, 5.29191), glm::vec3(1.55202, 1.61265, 4.45936), glm::vec3(0, 1, 0));
-    helloVk.findAllEmitters();
+int main(int argc, char** argv)
+{
+  UNUSED(argc);
+
+  // Setup GLFW window
+  glfwSetErrorCallback(onErrorCallback);
+  if(!glfwInit())
+  {
+    return 1;
   }
 
-  // #VKGraphic
-  helloVk.createOffscreenRender();
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, PROJECT_NAME, nullptr, nullptr);
+
+
+  // Setup Vulkan
+  if(!glfwVulkanSupported())
+  {
+    printf("GLFW: Vulkan Not Supported\n");
+    return 1;
+  }
+
+  // setup some basic things , logging file for example
+  NVPSystem system(PROJECT_NAME);
+
+  // Search path for shaders and other media
+  defaultSearchPaths = {
+      NVPSystem::exePath() + PROJECT_RELDIRECTORY,
+      NVPSystem::exePath() + PROJECT_RELDIRECTORY "..",
+      std::string(PROJECT_NAME),
+  };
+
+
+  nvvk::Context vkctx;
+  vkContextInit(vkctx);
+
+  HelloVulkan helloVk;
+  // some basic initializations
+  {
+    const VkSurfaceKHR surface = helloVk.getVkSurface(vkctx.m_instance, window);  // Window need to be opened to get the surface on which to draw
+    vkctx.setGCTQueueWithPresent(surface);
+    helloVk.setup(vkctx.m_instance, vkctx.m_device, vkctx.m_physicalDevice, vkctx.m_queueGCT.familyIndex);
+    helloVk.createSwapchain(surface, WINDOW_WIDTH, WINDOW_HEIGHT);
+    helloVk.createDepthBuffer();
+    helloVk.createRenderPass();
+    helloVk.createFrameBuffers();
+    // Setup Imgui
+    helloVk.initGUI(0);  // Using sub-pass 0
+  }
+
+  // Scene Preparation
+  sceneLoader(helloVk);
+
+  //=========================================================================================
+  // Graphic Pipeline Setup
+  // *Desc Set:
+  // - SceneBindings::eGlobals  : uniform buffer for per-frame camera properties
+  // - SceneBindings::eObjDescs : storage buffer for bindless access of obj datas in device
+  // - SceneBindings::eTextures : texture buffers
+  //
+  // *renderpass0 subpass0 Frame Buffers:
+  // - Texture m_offscreenColor; (can be showcased in post pipeline)
+  // - Texture m_gPosition, m_gNormal, m_gAlbedo; (G buffers for defferd shading or something)
+  // - Texture m_offscreenDepth; (vk build-in depth test)
+  //==========================================================================================
+  helloVk.createOffscreenRenderPass();
   helloVk.createDescriptorSetLayout();
   helloVk.createGraphicsPipeline();
   helloVk.createUniformBuffer();
   helloVk.createObjDescriptionBuffer();
   helloVk.updateGraphicDescriptorSet();
+  // helloVk.createGraphicsPipeline2();
 
-  helloVk.createGraphicsPipeline2();
+  //==================================
+  // Compute Pipeline 1 Setup
+  helloVk.createReStir_StorageBuffer();  // create ssbo
+  helloVk.createReStir_DescriptorSet();  // create desc set for ReSTIR
 
-  // #VKRay
+  //==================================
+  // Compute Pipeline 2 Setup
+
+  //==================================
+  // Ray tracing Pipeline Setup
   helloVk.initRayTracing();
   helloVk.createBottomLevelAS();
   helloVk.createTopLevelAS();
@@ -231,7 +230,11 @@ int main(int argc, char** argv)
   helloVk.createRtPipeline();
   helloVk.createRtShaderBindingTable();
 
-  // #VKpost
+  //=========================================================================================
+  // Post Pipeline Setup
+  // - simply showcase a color texture onto a quad
+  //=========================================================================================
+
   helloVk.createPostDescriptor();
   helloVk.createPostPipeline();
   helloVk.updatePostDescriptorSet();
@@ -282,9 +285,12 @@ int main(int argc, char** argv)
     vkBeginCommandBuffer(cmdBuf, &beginInfo);
 
     // Clearing screen
-    std::array<VkClearValue, 2> clearValues{};
+    std::array<VkClearValue, 5> clearValues{};
     clearValues[0].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-    clearValues[1].depthStencil = {1.0f, 0};
+    clearValues[1].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+    clearValues[2].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+    clearValues[4].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+    clearValues[5].depthStencil = {1.0f, 0};
 
     // Updating Per Frame Status before any pass: camera buffer, frame num...
     helloVk.updateUniformBuffer(cmdBuf);
@@ -293,7 +299,7 @@ int main(int argc, char** argv)
     // Offscreen render pass
     {
       VkRenderPassBeginInfo offscreenRenderPassBeginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-      offscreenRenderPassBeginInfo.clearValueCount = 2;
+      offscreenRenderPassBeginInfo.clearValueCount = 5;
       offscreenRenderPassBeginInfo.pClearValues    = clearValues.data();
       offscreenRenderPassBeginInfo.renderPass      = helloVk.m_offscreenRenderPass;
       offscreenRenderPassBeginInfo.framebuffer     = helloVk.m_offscreenFramebuffer;
@@ -302,12 +308,35 @@ int main(int argc, char** argv)
       // Rendering Scene
       if(useRaytracer)
       {
-        helloVk.raytrace(cmdBuf, clearColor);
+        if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse)
+        {
+          // 1. graphic pipeline to generate G-buffer
+          vkCmdBeginRenderPass(cmdBuf, &offscreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+          helloVk.rasterize(cmdBuf);
+          vkCmdEndRenderPass(cmdBuf);
+          // layout 转换？ compute shader数据读取？
+          // 2. compute pipeline 1: RIS with Direct light sampling
+
+
+          // 3. compute pipeline 2: Spatiol reuse
+
+          // 4. raytracing to shade direct light
+        }
+        else if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatiotemporal_reuse)
+        {
+          exit(-1);
+        }
+        else
+        {
+          // NEE/NEE_temporal/RIS
+          helloVk.raytrace(cmdBuf, clearColor);
+        }
       }
+      // graphic pipeline
       else
       {
         vkCmdBeginRenderPass(cmdBuf, &offscreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-        helloVk.rasterize2(cmdBuf);
+        helloVk.rasterize(cmdBuf);
         vkCmdEndRenderPass(cmdBuf);
       }
     }

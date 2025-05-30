@@ -29,31 +29,73 @@
 #include "wavefront.glsl"
 
 
-layout(push_constant) uniform _PushConstantRaster
-{
-  PushConstantRaster pcRaster;
-};
-
 // clang-format off
-// Incoming 
+
+// 插值后的fragment属性
 layout(location = 1) in vec3 i_worldPos;
 layout(location = 2) in vec3 i_worldNrm;
 layout(location = 3) in vec3 i_viewDir;
 layout(location = 4) in vec2 i_texCoord;
-// Outgoing
-layout(location = 0) out vec4 o_color;
 
+// 输出数据到RenderPass 中该索引对应的color attachment/vkimage中
+layout(location = 0) out vec4 o_color;
+layout(location = 1) out vec4 o_wpos;
+layout(location = 2) out vec4 o_norm;
+layout(location = 3) out vec4 o_albedo;
+
+// dynamic binding
 layout(buffer_reference, scalar) buffer Vertices {Vertex v[]; }; // Positions of an object
 layout(buffer_reference, scalar) buffer Indices {uint i[]; }; // Triangle indices
 layout(buffer_reference, scalar) buffer Materials {WaveFrontMaterial m[]; }; // Array of all materials on an object
 layout(buffer_reference, scalar) buffer MatIndices {int i[]; }; // Material ID for each triangle
 
+// descriptor set
 layout(binding = eObjDescs, scalar) buffer ObjDesc_ { ObjDesc i[]; } objDesc;
 layout(binding = eTextures) uniform sampler2D[] textureSamplers;
+
+// push constant
+layout(push_constant) uniform _PushConstantRaster
+{
+  PushConstantRaster pcRaster;
+};
+
 // clang-format on
 
 
 void main()
+{
+   // Material of the object
+  ObjDesc    objResource = objDesc.i[pcRaster.objIndex];
+  MatIndices matIndices  = MatIndices(objResource.materialIndexAddress);
+  Materials  materials   = Materials(objResource.materialAddress);
+
+  int               matIndex = matIndices.i[gl_PrimitiveID];
+  WaveFrontMaterial mat      = materials.m[matIndex];
+
+  vec3 N = normalize(i_worldNrm);
+
+  vec3 diffuseTxt;
+  if(mat.textureId >= 0)
+  {
+    int  txtOffset  = objDesc.i[pcRaster.objIndex].txtOffset;
+    uint txtId      = txtOffset + mat.textureId;
+    diffuseTxt = texture(textureSamplers[nonuniformEXT(txtId)], i_texCoord).xyz;
+  }
+  else
+  {
+    diffuseTxt=mat.diffuse;
+  }
+
+  // Result
+  o_wpos=vec4(i_worldPos,1);
+  o_norm=vec4(N,1);
+  o_albedo=vec4(diffuseTxt,1);
+  o_color=o_albedo;
+
+}
+
+
+void main2()
 {
   // Material of the object
   ObjDesc    objResource = objDesc.i[pcRaster.objIndex];
