@@ -217,6 +217,7 @@ int main(int argc, char** argv)
   // Compute Pipeline 1 Setup
   helloVk.createReStir_StorageBuffer();  // create ssbo
   helloVk.createReStir_DescriptorSet();  // create desc set for ReSTIR
+  helloVk.createComputePipeline_RIS();   // create compute pipeline
 
   //==================================
   // Compute Pipeline 2 Setup

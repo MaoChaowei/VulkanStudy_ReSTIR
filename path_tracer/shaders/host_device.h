@@ -79,6 +79,15 @@ struct PushConstantRaster
   uint     emitterTriangleNum;
 };
 
+// push constant structure for the first compute shader
+struct PushConstantComputeRIS
+{
+  uint     singlePassSampleNum;
+  uint     passNum;
+  uint64_t emitterTrianglesAddress;
+  uint64_t emitterPrefixSumAddress;
+  uint     emitterTriangleNum;
+};
 
 // Push constant structure for the ray tracer
 struct PushConstantRay

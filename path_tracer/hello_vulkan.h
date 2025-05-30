@@ -45,6 +45,7 @@ public:
   void resetFrame();
   void updateFrame();
   void onResize(int /*w*/, int /*h*/) override;
+  void destroyResources();
 
   nvvk::ResourceAllocatorDma m_alloc;  // Allocator for buffer, images, acceleration structures
   nvvk::DebugUtil            m_debug;  // Utility to name objects
@@ -61,7 +62,6 @@ public:
   void createUniformBuffer();
   void createObjDescriptionBuffer();
   void updateUniformBuffer(const VkCommandBuffer& cmdBuf);
-  void destroyResources();
   void rasterize(const VkCommandBuffer& cmdBuff);
   // void rasterize2(const VkCommandBuffer& cmdBuff);
   void createOffscreenRenderPass();
@@ -181,4 +181,7 @@ public:
   VkDescriptorPool            m_ReStirDescPool;
   VkDescriptorSetLayout       m_ReStirDescSetLayout;
   VkDescriptorSet             m_ReStirDescSet;
+
+  VkPipelineLayout m_RIScomputePipeLayout;
+  VkPipeline       m_RIScomputePipeLine;
 };
