@@ -208,7 +208,7 @@ void main()
     }
 
     //------------------------------------//
-    //      Indirect light sampling         //
+    //      Indirect light sampling       //
     //------------------------------------//
 
     // sampling bsdf with cos-weighted pdf

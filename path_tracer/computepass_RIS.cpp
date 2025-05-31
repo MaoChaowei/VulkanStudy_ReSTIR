@@ -18,9 +18,10 @@ void HelloVulkan::computeRIS(const VkCommandBuffer& cmdBuf)
   vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, m_RIScomputePipeLine);
 
   // Bind the descriptor set
-  std::array<VkDescriptorSet, 2> descSets;
+  std::array<VkDescriptorSet, 3> descSets;
   descSets[0] = m_ReStirDescSet;
   descSets[1] = m_GbufferDescSet;
+  descSets[2] = m_rtDescSet;
 
   vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, m_RIScomputePipeLayout, 0, descSets.size(),
                           descSets.data(), 0, nullptr);
@@ -42,9 +43,10 @@ void HelloVulkan::createComputePipeline_RIS()
   // Creating the Pipeline Layout
   VkPushConstantRange pushConstantRanges = {.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT, .offset = 0, .size = sizeof(PushConstantComputeRIS)};
 
-  std::array<VkDescriptorSetLayout, 2> descSetLayouts;
+  std::array<VkDescriptorSetLayout, 3> descSetLayouts;
   descSetLayouts[0] = m_ReStirDescSetLayout;
   descSetLayouts[1] = m_GbufferDescSetLayout;
+  descSetLayouts[2] = m_rtDescSetLayout;
 
   VkPipelineLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
   createInfo.setLayoutCount         = descSetLayouts.size();

@@ -126,7 +126,7 @@ void sceneLoader(HelloVulkan& helloVk)
   trans["dragon"] = glm::rotate(trans["dragon"], 3.14f * 0.7f, glm::vec3(0, 1, 0));
   trans["dragon"] = glm::scale(trans["dragon"], glm::vec3(1.2, 1.2, 1.2));
 
-  if(0)
+  if(1)
   {
     helloVk.loadModel(nvh::findFile("media/scenes/fireplace_room/fireplace_room.obj", defaultSearchPaths, true));
     CameraManip.setLookat(glm::vec3(4.20767, 1.01458, -3.20028), glm::vec3(-1.06465, 1.35220, 0.32594), glm::vec3(0, 1, 0));
@@ -202,6 +202,26 @@ int main(int argc, char** argv)
   sceneLoader(helloVk);
 
   //=========================================================================================
+  //                                resource creation
+  //=========================================================================================
+  helloVk.createOffscreenRenderPass();
+  helloVk.createDescriptorSetLayout();
+  helloVk.createGraphicsPipeline();
+  helloVk.createUniformBuffer();
+  helloVk.createObjDescriptionBuffer();
+
+  helloVk.createReStir_StorageBuffer();     // create ssbo
+  helloVk.createReservoir_DescriptorSet();  // create desc set 1 for ssbo
+  helloVk.createGbuffer_DescriptorSet();    // create desc set 2 for g-buffers
+
+
+  helloVk.initRayTracing();
+  helloVk.createBottomLevelAS();
+  helloVk.createTopLevelAS();
+  helloVk.createRtDescriptorSet();  // create and write a descriptor set of out_image and TLAS
+
+
+  //=========================================================================================
   // Graphic Pipeline Setup
   // *Desc Set:
   // - SceneBindings::eGlobals  : uniform buffer for per-frame camera properties
@@ -213,30 +233,21 @@ int main(int argc, char** argv)
   // - Texture m_gPosition, m_gNormal, m_gAlbedo; (G buffers for defferd shading or something)
   // - Texture m_offscreenDepth; (vk build-in depth test)
   //==========================================================================================
-  helloVk.createOffscreenRenderPass();
-  helloVk.createDescriptorSetLayout();
-  helloVk.createGraphicsPipeline();
-  helloVk.createUniformBuffer();
-  helloVk.createObjDescriptionBuffer();
+
   helloVk.updateGraphicDescriptorSet();
   // helloVk.createGraphicsPipeline2();
 
+
   //==================================
   // Compute Pipeline 1 Setup
-  helloVk.createReStir_StorageBuffer();     // create ssbo
-  helloVk.createReservoir_DescriptorSet();  // create desc set 1 for ssbo
-  helloVk.createGbuffer_DescriptorSet();    // create desc set 2 for g-buffers
-  helloVk.createComputePipeline_RIS();      // create compute pipeline
+  helloVk.createComputePipeline_RIS();  // create compute pipeline
 
   //==================================
   // Compute Pipeline 2 Setup
 
   //==================================
   // Ray tracing Pipeline Setup
-  helloVk.initRayTracing();
-  helloVk.createBottomLevelAS();
-  helloVk.createTopLevelAS();
-  helloVk.createRtDescriptorSet();  // create and write a descriptor set of out_image and TLAS
+
   helloVk.createRtPipeline();
   helloVk.createRtShaderBindingTable();
 
