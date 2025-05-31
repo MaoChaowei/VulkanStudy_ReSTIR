@@ -17,7 +17,7 @@ layout(set=0,binding=eReservoirPrev,scalar) buffer ReservoirPrev_{Reservoir prev
 
 layout(set=1,binding=eWorldPosition, rgba32f) uniform image2D wPosGbuffer;
 layout(set=1,binding=eWorldNormal, rgba16f) uniform image2D wNormGbuffer;
-layout(set=1,binding=eMatKs, rgba8) uniform image2D KsGbuffer;
+layout(set=1,binding=eMatKs, rgba8) uniform image2D KdGbuffer;
 layout(set=1,binding=eComputeOutImage, rgba32f) uniform image2D image;
 
 layout(set = 2, binding = eTlas) uniform accelerationStructureEXT topLevelAS;
@@ -69,7 +69,7 @@ bool updateReservoir(inout Reservoir r,LightSample lightSample,float src_pdf,flo
         r.sampleNum+=1;
         return false;
     }
-    float weight=target_pdf/src_pdf;
+    float weight=clamp(target_pdf/src_pdf,0,100);
     r.sampleNum+=1;
     r.totalWeight+=weight;
     if(rnd(seed)<weight/r.totalWeight){
@@ -92,7 +92,7 @@ void main(){
 
     vec3 worldPos=imageLoad(wPosGbuffer,ivec2(gl_GlobalInvocationID.xy)).xyz;
     vec3 worldNrm=imageLoad(wNormGbuffer,ivec2(gl_GlobalInvocationID.xy)).xyz;
-    vec3 ks=imageLoad(KsGbuffer,ivec2(gl_GlobalInvocationID.xy)).xyz;
+    vec3 kd=imageLoad(KdGbuffer,ivec2(gl_GlobalInvocationID.xy)).xyz;
     EmitterTriangles emitters=EmitterTriangles(pcRIS.emitterTrianglesAddress);
 
     // get current reservoir
@@ -139,9 +139,10 @@ void main(){
             
         float d2=light_dist*light_dist;
         float pdf_light=getLuminance(light_radiance)/pcRIS.emitterTotalWeight;
-        float pdf_source=pdf_light*(d2/lightNdotL);// converted to pdf_w
-        float pdf_target = getLuminance( light_radiance) * srcNdotL * lightNdotL / (PI * d2);
-
+        float G=d2/lightNdotL;
+        float pdf_source=pdf_light*G;// converted to pdf_w
+        // float pdf_target = pdf_source* srcNdotL;// because of the simplicity of Lambertian reflection model,the src pdf is quite simple as well
+        float pdf_target = getLuminance(light_radiance*kd) * srcNdotL /G ;   // L · f · cos / d^2
         LightSample light_sample;
         light_sample.lightPos=dst_pos;
         light_sample.lightNrm=light_norm;

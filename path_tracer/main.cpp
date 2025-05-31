@@ -126,7 +126,7 @@ void sceneLoader(HelloVulkan& helloVk)
   trans["dragon"] = glm::rotate(trans["dragon"], 3.14f * 0.7f, glm::vec3(0, 1, 0));
   trans["dragon"] = glm::scale(trans["dragon"], glm::vec3(1.2, 1.2, 1.2));
 
-  if(1)
+  if(0)
   {
     helloVk.loadModel(nvh::findFile("media/scenes/fireplace_room/fireplace_room.obj", defaultSearchPaths, true));
     CameraManip.setLookat(glm::vec3(4.20767, 1.01458, -3.20028), glm::vec3(-1.06465, 1.35220, 0.32594), glm::vec3(0, 1, 0));
@@ -136,8 +136,8 @@ void sceneLoader(HelloVulkan& helloVk)
     helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-Lights.obj", defaultSearchPaths, true),
                       glm::rotate(glm::mat4(1.f), 3.14f, glm::vec3(0, 1, 0)));
     helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-CO.obj", defaultSearchPaths, true));
-    // helloVk.loadModel(nvh::findFile("media/scenes/buddha/buddha.obj", defaultSearchPaths, true), trans["buddha"]);
-    helloVk.loadModel(nvh::findFile("media/scenes/dragon/dragon.obj", defaultSearchPaths, true), trans["dragon"]);
+    helloVk.loadModel(nvh::findFile("media/scenes/buddha/buddha.obj", defaultSearchPaths, true), trans["buddha"]);
+    // helloVk.loadModel(nvh::findFile("media/scenes/dragon/dragon.obj", defaultSearchPaths, true), trans["dragon"]);
     CameraManip.setLookat(glm::vec3(0.06118, 1.20128, 3.09162), glm::vec3(0.06005, 1.13624, 2.09373), glm::vec3(0, 1, 0));
   }
   else

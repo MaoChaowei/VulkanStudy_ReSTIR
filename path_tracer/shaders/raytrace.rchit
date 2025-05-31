@@ -131,20 +131,17 @@ void main()
     light_pos=lightSample.lightPos;
     light_norm = lightSample.lightNrm;
     light_radiance=lightSample.radiance;
-    float weighted_pdf=1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum;
+    // float weighted_pdf=max(0.f,1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum);
+    float weighted_pdf=cur_r.targetPdf<EPSILON?0:(1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum);
+
 
     vec3 shadow_ray_dir=light_pos-worldPos;
     float light_dist=length(shadow_ray_dir);
     shadow_ray_dir=normalize(shadow_ray_dir);
 
-    float lightNdotL=max(dot(light_norm,-shadow_ray_dir),0);
     float srcNdotL=max(dot(worldNrm,shadow_ray_dir),0);
-
-    rpd.direct_radiance=vec3(0.f);
-    float G=lightNdotL*srcNdotL/(light_dist*light_dist);
     vec3 bsdf=albedo/PI;
-    rpd.direct_radiance=bsdf*G*light_radiance*weighted_pdf;
-
+    rpd.direct_radiance=bsdf*srcNdotL*light_radiance*weighted_pdf;
 
   }
   else if(pcRay.algo_type==NEE||pcRay.algo_type==NEE_temporal_reuse)

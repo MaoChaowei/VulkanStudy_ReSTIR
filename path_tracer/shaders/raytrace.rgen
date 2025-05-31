@@ -74,7 +74,8 @@ void main()
       if(rpd.depth==0){
         curRadiance+=curThroughPut*rpd.emit_radiance;
       }
-      curRadiance += curThroughPut*(rpd.direct_radiance);
+
+      curRadiance +=curThroughPut*(rpd.direct_radiance);
       curThroughPut *= rpd.indirect_weight;
 
       // RR
