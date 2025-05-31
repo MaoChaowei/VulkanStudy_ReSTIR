@@ -90,7 +90,7 @@ void main()
   o_wpos=vec4(i_worldPos,1);
   o_norm=vec4(N,1);
   o_albedo=vec4(diffuseTxt,1);
-  o_color=o_albedo;
+  // o_color=o_albedo;
 
 }
 

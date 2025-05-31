@@ -27,6 +27,7 @@ layout(buffer_reference, scalar) buffer EmitterPrefixSum{ float i[];}; // prefix
 layout(set = 0, binding = eTlas) uniform accelerationStructureEXT topLevelAS;
 layout(set = 1, binding = eObjDescs, scalar) buffer ObjDesc_ { ObjDesc i[]; } objDesc;
 layout(set = 1, binding = eTextures) uniform sampler2D textureSamplers[];
+layout(set=2,binding=eReservoirCur,scalar) buffer ReservoirCur_{Reservoir current[];};
 
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 // clang-format on
@@ -73,7 +74,7 @@ vec3 getDiffuseColor( WaveFrontMaterial mtl,int txtOffset,vec2 texCoord)
   }
 }
 
-/* Implement of NEE  */
+
 void main()
 {
   // Object data
@@ -119,75 +120,105 @@ void main()
   if(rpd.depth==0&&dot(rpd.ray.direction,worldNrm)<0.f)
     rpd.emit_radiance=mtl.emission;
 
-  //------------------------------------//
-  //      direct light sampling         //
-  //------------------------------------//
 
-  // Sampling a light point with pdf(A)=pointWeight/totalWeight
-  uint emitTriangleID=binarySearchEmitFace(rnd(rpd.seed));
-  EmitTriangle emitTriangle=emitters.i[emitTriangleID];
+  vec3 light_pos=vec3(0.f);
+  vec3 light_norm=vec3(0.f);
+  vec3 light_radiance=vec3(0.f);
 
-  float u1=rnd(rpd.seed);
-  float u2=rnd(rpd.seed);
-  if(u1+u2>1.0){
-    u1=1-u1;
-    u2=1-u2;
+  if(pcRay.algo_type==RIS||pcRay.algo_type==RIS_spatial_reuse||pcRay.algo_type==RIS_spatiotemporal_reuse){
+    Reservoir cur_r=current[gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x];
+    LightSample lightSample=cur_r.keptSample;
+    light_pos=lightSample.lightPos;
+    light_norm = lightSample.lightNrm;
+    light_radiance=lightSample.radiance;
+    float weighted_pdf=1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum;
+
+    vec3 shadow_ray_dir=light_pos-worldPos;
+    float light_dist=length(shadow_ray_dir);
+    shadow_ray_dir=normalize(shadow_ray_dir);
+
+    float lightNdotL=max(dot(light_norm,-shadow_ray_dir),0);
+    float srcNdotL=max(dot(worldNrm,shadow_ray_dir),0);
+
+    rpd.direct_radiance=vec3(0.f);
+    float G=lightNdotL*srcNdotL/(light_dist*light_dist);
+    vec3 bsdf=albedo/PI;
+    rpd.direct_radiance=bsdf*G*light_radiance*weighted_pdf;
+
+
   }
-  
-  vec3 dst_pos = (1 - u1 - u2) * emitTriangle.m_vpos[0] + u1 *emitTriangle.m_vpos[1] + u2 * emitTriangle.m_vpos[2];
-  vec3 light_norm = emitTriangle.m_normal;
-  vec3 light_radiance=emitTriangle.m_radiance;
+  else if(pcRay.algo_type==NEE||pcRay.algo_type==NEE_temporal_reuse)
+  {
+    //------------------------------------//
+    //      direct light sampling         //
+    //------------------------------------//
 
-  vec3 shadow_ray_dir=dst_pos-worldPos;
-  float light_dist=length(shadow_ray_dir);
-  shadow_ray_dir=normalize(shadow_ray_dir);
+    // Sampling a light point with pdf(A)=pointWeight/totalWeight
+    uint emitTriangleID=binarySearchEmitFace(rnd(rpd.seed));
+    EmitTriangle emitTriangle=emitters.i[emitTriangleID];
 
-  float lightNdotL=max(dot(light_norm,-shadow_ray_dir),0);
-  float srcNdotL=max(dot(worldNrm,shadow_ray_dir),0);
-
-  rpd.direct_radiance=vec3(0.f);
-  if(light_dist>EPSILON&&lightNdotL>0&&srcNdotL>0){ 
-
-    // shadow ray test
-    rayQueryEXT rayQuery;// First, initialize a ray query object
-    rayQueryInitializeEXT(rayQuery,              // Ray query
-                          topLevelAS,            // Top-level acceleration structure
-                          gl_RayFlagsOpaqueEXT,  // Ray flags, here saying "treat all geometry as opaque"
-                          0xFF,                  // 8-bit instance mask, here saying "trace against all instances"
-                          rpd.ray.origin,             // Ray origin
-                          0.0,                   // Minimum t-value
-                          shadow_ray_dir,          // Ray direction
-                          float(INF_T));              // Maximum t-value
-    
-    while(rayQueryProceedEXT(rayQuery));
-
-    float tHit =float(INF_T);
-    if(rayQueryGetIntersectionTypeEXT(rayQuery, true)!= gl_RayQueryCommittedIntersectionNoneEXT){
-      tHit = rayQueryGetIntersectionTEXT(rayQuery, true);
+    float u1=rnd(rpd.seed);
+    float u2=rnd(rpd.seed);
+    if(u1+u2>1.0){
+      u1=1-u1;
+      u2=1-u2;
     }
 
-    // direct light radiance
-    if(abs(tHit-light_dist)<0.1){
-      // L_dir=(bsdf*G*Li)/pdf(A)
-      float G=lightNdotL*srcNdotL/(light_dist*light_dist);
-      float inv_pdf_A=pcRay.emitterTotalWeight/getLuminance(light_radiance);
-      vec3 bsdf=albedo/PI;
+    light_pos = (1 - u1 - u2) * emitTriangle.m_vpos[0] + u1 *emitTriangle.m_vpos[1] + u2 * emitTriangle.m_vpos[2];
+    light_norm = emitTriangle.m_normal;
+    light_radiance=emitTriangle.m_radiance;
 
-      rpd.direct_radiance=bsdf*G*light_radiance*inv_pdf_A;
+    vec3 shadow_ray_dir=light_pos-worldPos;
+    float light_dist=length(shadow_ray_dir);
+    shadow_ray_dir=normalize(shadow_ray_dir);
+
+    float lightNdotL=max(dot(light_norm,-shadow_ray_dir),0);
+    float srcNdotL=max(dot(worldNrm,shadow_ray_dir),0);
+
+    rpd.direct_radiance=vec3(0.f);
+    if(light_dist>EPSILON&&lightNdotL>0&&srcNdotL>0){ 
+
+      // shadow ray test
+      rayQueryEXT rayQuery;// First, initialize a ray query object
+      rayQueryInitializeEXT(rayQuery,              // Ray query
+                            topLevelAS,            // Top-level acceleration structure
+                            gl_RayFlagsOpaqueEXT,  // Ray flags, here saying "treat all geometry as opaque"
+                            0xFF,                  // 8-bit instance mask, here saying "trace against all instances"
+                            rpd.ray.origin,             // Ray origin
+                            0.0,                   // Minimum t-value
+                            shadow_ray_dir,          // Ray direction
+                            float(INF_T));              // Maximum t-value
+      
+      while(rayQueryProceedEXT(rayQuery));
+
+      float tHit =float(INF_T);
+      if(rayQueryGetIntersectionTypeEXT(rayQuery, true)!= gl_RayQueryCommittedIntersectionNoneEXT){
+        tHit = rayQueryGetIntersectionTEXT(rayQuery, true);
+      }
+
+      // direct light radiance
+      if(abs(tHit-light_dist)<0.1){
+        // L_dir=(bsdf*G*Li)/pdf(A)
+        float G=lightNdotL*srcNdotL/(light_dist*light_dist);
+        float inv_pdf_A=pcRay.emitterTotalWeight/getLuminance(light_radiance);
+        vec3 bsdf=albedo/PI;
+
+        rpd.direct_radiance=bsdf*G*light_radiance*inv_pdf_A;
+      }
     }
+
+    //------------------------------------//
+    //      Indirect light sampling         //
+    //------------------------------------//
+
+    // sampling bsdf with cos-weighted pdf
+    vec3 tangent, bitangent;
+    createCoordinateSystem(worldNrm, tangent, bitangent);
+    rpd.ray.direction = samplingHemisphere(rpd.seed, tangent, bitangent, worldNrm);
+
+    // const float cos_theta = dot(rpd.ray.direction, worldNrm);
+    // const float pdf = cos_theta / PI;
+    rpd.indirect_weight=albedo;// Lambertian Reflection Model: bsdf*cos/pdf=albedo
   }
-
-  //------------------------------------//
-  //      Indirect light sampling         //
-  //------------------------------------//
-
-  // sampling bsdf with cos-weighted pdf
-  vec3 tangent, bitangent;
-  createCoordinateSystem(worldNrm, tangent, bitangent);
-  rpd.ray.direction = samplingHemisphere(rpd.seed, tangent, bitangent, worldNrm);
-
-  // const float cos_theta = dot(rpd.ray.direction, worldNrm);
-  // const float pdf = cos_theta / PI;
-  rpd.indirect_weight=albedo;// Lambertian Reflection Model: bsdf*cos/pdf=albedo
 
 }

@@ -41,7 +41,11 @@ void main()
   rpd.seed              = seed;
 
   vec3 curRadiance  = vec3(0);
-  for(int spp=0;spp<MAX_SPP;++spp)
+
+  bool is_restir=ALGORITHM==RIS||ALGORITHM==RIS_spatial_reuse||ALGORITHM==RIS_spatiotemporal_reuse;
+  int maxSPP=is_restir?1:MAX_SPP;
+
+  for(int spp=0;spp<maxSPP;++spp)
   {
     vec3 curThroughPut = vec3(1);
     rpd.emit_radiance     = vec3(0);
@@ -51,7 +55,9 @@ void main()
     rpd.ray.direction     = direction.xyz;
     rpd.indirect_weight   = vec3(0);
 
-    for(; rpd.depth < MAX_DEPTH; rpd.depth++)
+    int maxDepth=is_restir?1:MAX_DEPTH;
+
+    for(; rpd.depth < maxDepth ; rpd.depth++)
     {
       traceRayEXT(topLevelAS,        // acceleration structure
                   rayFlags,          // rayFlags
@@ -72,23 +78,31 @@ void main()
       curThroughPut *= rpd.indirect_weight;
 
       // RR
-      float RR=max(min((curThroughPut[0]+curThroughPut[1]+curThroughPut[2])*0.3333333f,0.95f),0.2f);
-      if(rnd(rpd.seed)<RR){
-          curThroughPut/=RR;
-      }
-      else{
-        break;
+      if(rpd.depth>=5){
+        float RR=max(min((curThroughPut[0]+curThroughPut[1]+curThroughPut[2])*0.3333333f,0.95f),0.2f);
+        if(rnd(rpd.seed)<RR){
+            curThroughPut/=RR;
+        }
+        else{
+          break;
+        }
       }
     }
   }
 
-  curRadiance/=MAX_SPP;
+  curRadiance/=maxSPP;
 
   if(pcRay.frame_num>0 && ALGORITHM==NEE_temporal_reuse)
   {
     float a=1.0f/float(pcRay.frame_num+1);
     vec3 old_color=imageLoad(image,ivec2(gl_LaunchIDEXT.xy)).xyz;
     imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color,curRadiance,a), 1.f));
+  }
+  else if(pcRay.frame_num>0&&is_restir){
+    float a=1.0f/float(pcRay.frame_num+1);
+    vec3 old_color=imageLoad(image,ivec2(gl_LaunchIDEXT.xy)).xyz;
+    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color,curRadiance,a), 1.f));
+    // imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(curRadiance, 1.f));
   }
   else
   {

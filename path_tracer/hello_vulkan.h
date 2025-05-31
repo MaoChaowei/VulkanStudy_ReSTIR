@@ -101,8 +101,9 @@ public:
   const int     m_attachmentsNum = 5;
   VkRenderPass  m_offscreenRenderPass{VK_NULL_HANDLE};
   VkFramebuffer m_offscreenFramebuffer{VK_NULL_HANDLE};
-  nvvk::Texture m_offscreenColor;
+  nvvk::Texture m_offscreenColor;  // ris模式下不可以写入
   nvvk::Texture m_offscreenDepth;
+  nvvk::Texture m_graphicOutColor;  // m_offscreenColor的副本，暂存fragment shader的输出
   nvvk::Texture m_gPosition, m_gNormal, m_gAlbedo;
 
   VkFormat m_offscreenColorFormat{VK_FORMAT_R32G32B32A32_SFLOAT};
@@ -170,9 +171,11 @@ public:
   /*                      Compute pipeline 1: RIS                               */
   /*============================================================================*/
   void createReStir_StorageBuffer();
-  void createReStir_DescriptorSet();
+  void createGbuffer_DescriptorSet();
+  void createReservoir_DescriptorSet();
   void updateReStir_DescriptorSet();
   void createComputePipeline_RIS();
+  void computeRIS(const VkCommandBuffer& cmdBuf);
 
 
   nvvk::Buffer                m_ReStirBufferCur;
@@ -180,8 +183,15 @@ public:
   nvvk::DescriptorSetBindings m_ReStirDescSetLayoutBind;
   VkDescriptorPool            m_ReStirDescPool;
   VkDescriptorSetLayout       m_ReStirDescSetLayout;
-  VkDescriptorSet             m_ReStirDescSet;
+  VkDescriptorSet             m_ReStirDescSet;  // 0- m_ReStirBufferCur 1- m_ReStirBufferPrev
+
+  nvvk::DescriptorSetBindings m_GbufferDescSetLayoutBind;
+  VkDescriptorPool            m_GbufferDescPool;
+  VkDescriptorSetLayout       m_GbufferDescSetLayout;
+  VkDescriptorSet             m_GbufferDescSet;  // 0- world position 1- normal 2- ks
 
   VkPipelineLayout m_RIScomputePipeLayout;
   VkPipeline       m_RIScomputePipeLine;
+
+  PushConstantComputeRIS m_pcRIS{.CandidateNum = 32};
 };

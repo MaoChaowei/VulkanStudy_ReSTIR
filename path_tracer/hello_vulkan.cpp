@@ -465,6 +465,7 @@ void HelloVulkan::createTextureImages(const VkCommandBuffer& cmdBuf, const std::
 //
 void HelloVulkan::destroyResources()
 {
+
   vkDestroyPipeline(m_device, m_RIScomputePipeLine, nullptr);
   vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
   // vkDestroyPipeline(m_device, m_graphicsPipeline2, nullptr);
@@ -493,14 +494,19 @@ void HelloVulkan::destroyResources()
     m_alloc.destroy(t);
   }
 
+  vkDestroyDescriptorPool(m_device, m_GbufferDescPool, nullptr);
   vkDestroyDescriptorPool(m_device, m_ReStirDescPool, nullptr);
+
   vkDestroyDescriptorSetLayout(m_device, m_ReStirDescSetLayout, nullptr);
+  vkDestroyDescriptorSetLayout(m_device, m_GbufferDescSetLayout, nullptr);
+
   m_alloc.destroy(m_emitterHandles.emittersBuffer);
   m_alloc.destroy(m_emitterHandles.emittersPrefixSumBuffer);
 
 
   //#Post
   m_alloc.destroy(m_offscreenColor);
+  m_alloc.destroy(m_graphicOutColor);
   m_alloc.destroy(m_offscreenDepth);
   m_alloc.destroy(m_gPosition);
   m_alloc.destroy(m_gAlbedo);
@@ -610,8 +616,8 @@ void HelloVulkan::onResize(int /*w*/, int /*h*/)
 //
 void HelloVulkan::createOffscreenRenderPass()
 {
-
-  m_alloc.destroy(m_offscreenColor);
+  m_alloc.destroy(m_graphicOutColor);
+  // m_alloc.destroy(m_offscreenColor);
   m_alloc.destroy(m_offscreenDepth);
   m_alloc.destroy(m_gPosition);
   m_alloc.destroy(m_gNormal);
@@ -633,10 +639,11 @@ void HelloVulkan::createOffscreenRenderPass()
     return tex;
   };
 
-  m_offscreenColor = makeGbuf(m_offscreenColorFormat);  // HDR
-  m_gPosition      = makeGbuf(m_offscreenWorldPosFormat);
-  m_gNormal        = makeGbuf(m_offscreenNormFormat);
-  m_gAlbedo        = makeGbuf(m_offscreenAlbedoFormat);
+  m_graphicOutColor = makeGbuf(m_offscreenColorFormat);
+  m_offscreenColor  = makeGbuf(m_offscreenColorFormat);  // HDR
+  m_gPosition       = makeGbuf(m_offscreenWorldPosFormat);
+  m_gNormal         = makeGbuf(m_offscreenNormFormat);
+  m_gAlbedo         = makeGbuf(m_offscreenAlbedoFormat);
 
 
   // 2) 创建 Depth ----------------------------------------------------------
@@ -664,6 +671,7 @@ void HelloVulkan::createOffscreenRenderPass()
       nvvk::cmdBarrierImageLayout(cmd, t.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
     };
     toGeneral(m_offscreenColor);
+    toGeneral(m_graphicOutColor);
     toGeneral(m_gPosition);
     toGeneral(m_gNormal);
     toGeneral(m_gAlbedo);
@@ -688,7 +696,10 @@ void HelloVulkan::createOffscreenRenderPass()
   }
 
   // 5) Framebuffer ---------------------------------------------------------
-  std::array<VkImageView, 5> atts = {m_offscreenColor.descriptor.imageView, m_gPosition.descriptor.imageView,
+  // std::array<VkImageView, 5> atts = {m_offscreenColor.descriptor.imageView, m_gPosition.descriptor.imageView,
+  //                                    m_gNormal.descriptor.imageView, m_gAlbedo.descriptor.imageView,
+  //                                    m_offscreenDepth.descriptor.imageView};
+  std::array<VkImageView, 5> atts = {m_graphicOutColor.descriptor.imageView, m_gPosition.descriptor.imageView,
                                      m_gNormal.descriptor.imageView, m_gAlbedo.descriptor.imageView,
                                      m_offscreenDepth.descriptor.imageView};
 
@@ -990,7 +1001,7 @@ void HelloVulkan::createRtPipeline()
   pipelineLayoutCreateInfo.pPushConstantRanges    = &pushConstant;
 
   // Descriptor sets: one specific to ray tracing, and one shared with the rasterization pipeline
-  std::vector<VkDescriptorSetLayout> rtDescSetLayouts = {m_rtDescSetLayout, m_descSetLayout};
+  std::vector<VkDescriptorSetLayout> rtDescSetLayouts = {m_rtDescSetLayout, m_descSetLayout, m_ReStirDescSetLayout};
   pipelineLayoutCreateInfo.setLayoutCount             = static_cast<uint32_t>(rtDescSetLayouts.size());
   pipelineLayoutCreateInfo.pSetLayouts                = rtDescSetLayouts.data();
 
@@ -1109,7 +1120,7 @@ void HelloVulkan::raytrace(const VkCommandBuffer& cmdBuf, const glm::vec4& clear
   m_pcRay.clearColor = clearColor;
 
 
-  std::vector<VkDescriptorSet> descSets{m_rtDescSet, m_descSet};
+  std::vector<VkDescriptorSet> descSets{m_rtDescSet, m_descSet, m_ReStirDescSet};
   vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipeline);
   vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipelineLayout, 0,
                           (uint32_t)descSets.size(), descSets.data(), 0, nullptr);

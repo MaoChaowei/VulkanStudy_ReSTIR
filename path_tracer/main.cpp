@@ -45,6 +45,8 @@ void renderUI(HelloVulkan& helloVk)
   {
     helloVk.m_frameChange |= ImGui::SliderInt("SPP", &helloVk.m_pcRay.spp_num, 1, 64);
     helloVk.m_frameChange |= ImGui::SliderInt("MaxDepth", &helloVk.m_pcRay.max_depth, 1, 20);
+
+    // path tracing mode
     static const char* PathTracingAlgosNames[PathTracingAlgos::PathTracingAlgos_Count] = {
         "NEE", "NEE_temporal_reuse", "RIS", "RIS_spatial_reuse", "RIS_spatiotemporal_reuse"};
 
@@ -65,6 +67,12 @@ void renderUI(HelloVulkan& helloVk)
       ImGui::EndCombo();
     }
     helloVk.m_frameChange |= old != helloVk.m_pcRay.algo_type;
+
+    // RESTIR setting
+    if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse)
+    {
+      helloVk.m_frameChange |= ImGui::SliderInt("Candidate Num", &helloVk.m_pcRIS.CandidateNum, 16, 1024);
+    }
   }
 }
 
@@ -78,7 +86,7 @@ void vkContextInit(nvvk::Context& vkctx)
   auto     reqExtensions = glfwGetRequiredInstanceExtensions(&count);
 
   // Requesting Vulkan extensions and layers
-  contextInfo.setVersion(1, 2);                       // Using Vulkan 1.2
+  contextInfo.setVersion(1, 4);                       // Using Vulkan 1.4
   for(uint32_t ext_id = 0; ext_id < count; ext_id++)  // Adding required extensions (surface, win32, linux, ..)
     contextInfo.addInstanceExtension(reqExtensions[ext_id]);
   contextInfo.addInstanceLayer("VK_LAYER_LUNARG_monitor", true);              // FPS in titlebar
@@ -118,7 +126,7 @@ void sceneLoader(HelloVulkan& helloVk)
   trans["dragon"] = glm::rotate(trans["dragon"], 3.14f * 0.7f, glm::vec3(0, 1, 0));
   trans["dragon"] = glm::scale(trans["dragon"], glm::vec3(1.2, 1.2, 1.2));
 
-  if(1)
+  if(0)
   {
     helloVk.loadModel(nvh::findFile("media/scenes/fireplace_room/fireplace_room.obj", defaultSearchPaths, true));
     CameraManip.setLookat(glm::vec3(4.20767, 1.01458, -3.20028), glm::vec3(-1.06465, 1.35220, 0.32594), glm::vec3(0, 1, 0));
@@ -215,9 +223,10 @@ int main(int argc, char** argv)
 
   //==================================
   // Compute Pipeline 1 Setup
-  helloVk.createReStir_StorageBuffer();  // create ssbo
-  helloVk.createReStir_DescriptorSet();  // create desc set for ReSTIR
-  helloVk.createComputePipeline_RIS();   // create compute pipeline
+  helloVk.createReStir_StorageBuffer();     // create ssbo
+  helloVk.createReservoir_DescriptorSet();  // create desc set 1 for ssbo
+  helloVk.createGbuffer_DescriptorSet();    // create desc set 2 for g-buffers
+  helloVk.createComputePipeline_RIS();      // create compute pipeline
 
   //==================================
   // Compute Pipeline 2 Setup
@@ -287,11 +296,13 @@ int main(int argc, char** argv)
 
     // Clearing screen
     std::array<VkClearValue, 5> clearValues{};
-    clearValues[0].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-    clearValues[1].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-    clearValues[2].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-    clearValues[4].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-    clearValues[5].depthStencil = {1.0f, 0};
+    {
+      clearValues[0].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+      clearValues[1].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+      clearValues[2].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+      clearValues[4].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+      clearValues[5].depthStencil = {1.0f, 0};
+    }
 
     // Updating Per Frame Status before any pass: camera buffer, frame num...
     helloVk.updateUniformBuffer(cmdBuf);
@@ -309,19 +320,84 @@ int main(int argc, char** argv)
       // Rendering Scene
       if(useRaytracer)
       {
-        if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse)
+        if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS)
         {
-          // 1. graphic pipeline to generate G-buffer
-          vkCmdBeginRenderPass(cmdBuf, &offscreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-          helloVk.rasterize(cmdBuf);
-          vkCmdEndRenderPass(cmdBuf);
-          // layout 转换？ compute shader数据读取？
-          // 2. compute pipeline 1: RIS with Direct light sampling
 
+          for(helloVk.m_pcRay.frame_num = 0; helloVk.m_pcRay.frame_num < helloVk.m_pcRay.spp_num; ++helloVk.m_pcRay.frame_num)
+          {
+            // 1. graphic pipeline to generate G-buffer
+            vkCmdBeginRenderPass(cmdBuf, &offscreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+            helloVk.rasterize(cmdBuf);
+            vkCmdEndRenderPass(cmdBuf);
 
-          // 3. compute pipeline 2: Spatiol reuse
+            // memory barrier: write Gbuffers in gs -> read in cs
+            {
+              VkMemoryBarrier2 gbuf2comp{VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
+              gbuf2comp.srcStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+              gbuf2comp.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+              gbuf2comp.dstStageMask  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+              gbuf2comp.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;  // 仅读采样
 
-          // 4. raytracing to shade direct light
+              VkDependencyInfo depInfo{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+              depInfo.memoryBarrierCount = 1;
+              depInfo.pMemoryBarriers    = &gbuf2comp;
+
+              vkCmdPipelineBarrier2(cmdBuf, &depInfo);
+            }
+            // memory barrier: clear m_ReStirBufferCur buffer
+            {
+              vkCmdFillBuffer(cmdBuf, helloVk.m_ReStirBufferCur.buffer,
+                              /*offset*/ 0,
+                              /*size  */ VK_WHOLE_SIZE,
+                              /*data   */ 0u  // 4-byte pattern → 全 0
+              );
+
+              VkMemoryBarrier2 barrier{
+                  .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+                  .srcStageMask  = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                  .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                  .dstStageMask  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                  .dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+              };
+              VkDependencyInfo depInfo{
+                  .sType              = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                  .memoryBarrierCount = 1,
+                  .pMemoryBarriers    = &barrier,
+              };
+              vkCmdPipelineBarrier2(cmdBuf, &depInfo);
+            }
+            // 2. compute pipeline 1: RIS with Direct light sampling
+            helloVk.computeRIS(cmdBuf);
+
+            // memory barrier: write reservoirCur in cs1 -> read in cs2
+            {
+              VkMemoryBarrier2 comp2comp{VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
+              comp2comp.srcStageMask  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+              comp2comp.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
+              comp2comp.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+              comp2comp.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+
+              VkDependencyInfo depInfo2{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+              depInfo2.memoryBarrierCount = 1;
+              depInfo2.pMemoryBarriers    = &comp2comp;
+
+              vkCmdPipelineBarrier2(cmdBuf, &depInfo2);
+            }
+
+            // 3. compute pipeline 2: Spatiol reuse
+
+            // 4. raytracing to shade direct light
+            helloVk.raytrace(cmdBuf, clearColor);
+            {
+              VkMemoryBarrier2 rt2shader{.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+                                         .srcStageMask  = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+                                         .srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT,
+                                         .dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+                                         .dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT};
+              VkDependencyInfo depInfo{.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .memoryBarrierCount = 1, .pMemoryBarriers = &rt2shader};
+              vkCmdPipelineBarrier2(cmdBuf, &depInfo);
+            }
+          }
         }
         else if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatiotemporal_reuse)
         {
@@ -329,7 +405,7 @@ int main(int argc, char** argv)
         }
         else
         {
-          // NEE/NEE_temporal/RIS
+          // NEE/NEE_temporal
           helloVk.raytrace(cmdBuf, clearColor);
         }
       }

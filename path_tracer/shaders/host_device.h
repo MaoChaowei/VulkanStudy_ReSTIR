@@ -31,7 +31,14 @@ START_BINDING(RtxBindings)
   eOutImage = 1   // Ray tracer output image
 END_BINDING();
 
-START_BINDING(ReSTIR)
+START_BINDING(GBufferBindings)
+  eWorldPosition     = 0,  
+  eWorldNormal       = 1,
+  eMatKs             = 2,
+  eComputeOutImage   = 3
+END_BINDING();
+
+START_BINDING(ReSTIRBindings)
   eReservoirCur =0,     // SSBO
   eReservoirPrev =1     // SSBO
 END_BINDING();
@@ -82,11 +89,11 @@ struct PushConstantRaster
 // push constant structure for the first compute shader
 struct PushConstantComputeRIS
 {
-  uint     singlePassSampleNum;
-  uint     passNum;
+  int      CandidateNum;
   uint64_t emitterTrianglesAddress;
   uint64_t emitterPrefixSumAddress;
   uint     emitterTriangleNum;
+  float    emitterTotalWeight;
 };
 
 // Push constant structure for the ray tracer
@@ -98,6 +105,7 @@ struct PushConstantRay
   uint     emitterTriangleNum;
   float    emitterTotalWeight;
   int      frame_num;
+  int      restir_spp_num;
 
   // SETTINGS
   int max_depth;
@@ -152,5 +160,8 @@ struct Reservoir
   float       targetPdf;    // (target pdf value)
 };
 
+
+#define CS_WORK_GROUP_SIZE_X 8
+#define CS_WORK_GROUP_SIZE_Y 8
 
 #endif
