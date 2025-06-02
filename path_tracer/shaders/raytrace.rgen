@@ -24,6 +24,7 @@ layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 
 void main()
 {
+
   // Initialize the random number
   uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, int(clockARB()));
 
@@ -42,7 +43,7 @@ void main()
 
   vec3 curRadiance  = vec3(0);
 
-  bool is_restir=ALGORITHM==RIS||ALGORITHM==RIS_spatial_reuse||ALGORITHM==RIS_spatiotemporal_reuse;
+  bool is_restir=ALGORITHM==RIS||ALGORITHM==RIS_spatial_reuse||ALGORITHM==RIS_spatiotemporal_reuse||ALGORITHM == RIS_temporal_reuse;
   int maxSPP=is_restir?1:MAX_SPP;
 
   for(int spp=0;spp<maxSPP;++spp)
@@ -93,20 +94,40 @@ void main()
 
   curRadiance/=maxSPP;
 
-  if(pcRay.frame_num>0 && ALGORITHM==NEE_temporal_reuse)
-  {
-    float a=1.0f/float(pcRay.frame_num+1);
-    vec3 old_color=imageLoad(image,ivec2(gl_LaunchIDEXT.xy)).xyz;
-    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color,curRadiance,a), 1.f));
-  }
-  else if(pcRay.frame_num>0&&is_restir){
-    float a=1.0f/float(pcRay.frame_num+1);
-    vec3 old_color=imageLoad(image,ivec2(gl_LaunchIDEXT.xy)).xyz;
-    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color,curRadiance,a), 1.f));
-  }
-  else
-  {
+  if(ALGORITHM==NEE){
     imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(curRadiance, 1.f));
+  }
+  else if(ALGORITHM==NEE_temporal_reuse){
+    if(pcRay.frame_num>0)
+    {
+      float a=1.0f/float(pcRay.frame_num+1);
+      vec3 old_color=imageLoad(image,ivec2(gl_LaunchIDEXT.xy)).xyz;
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color,curRadiance,a), 1.f));
+    }
+    else
+    {
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(curRadiance, 1.f));
+    }
+  }
+  else if(ALGORITHM==RIS||ALGORITHM==RIS_spatial_reuse){
+    if(pcRay.restir_spp_idx>0&&is_restir){
+      float a=1.0f/float(pcRay.restir_spp_idx+1);
+      vec3 old_color=imageLoad(image,ivec2(gl_LaunchIDEXT.xy)).xyz;
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color,curRadiance,a), 1.f));
+    }
+    else{
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(curRadiance, 1.f));
+    }
+  }
+  else if(ALGORITHM==RIS_spatiotemporal_reuse||ALGORITHM == RIS_temporal_reuse){
+    if(pcRay.restir_spp_idx==0&&pcRay.frame_num==0){
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(curRadiance, 1.f));
+    }
+    else{
+      float a=1.0f/float(pcRay.spp_num*pcRay.frame_num + pcRay.restir_spp_idx+1);
+      vec3 old_color=imageLoad(image,ivec2(gl_LaunchIDEXT.xy)).xyz;
+      imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color,curRadiance,a), 1.f));
+    }
   }
   
 }

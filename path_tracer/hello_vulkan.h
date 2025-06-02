@@ -83,14 +83,14 @@ public:
   EmitterHandles           m_emitterHandles;  // handles to scene emitters
 
   // Graphic pipeline
-  VkPipelineLayout m_pipelineLayout;
-  VkPipeline       m_graphicsPipeline;
+  VkPipelineLayout m_pipelineLayout{VK_NULL_HANDLE};
+  VkPipeline       m_graphicsPipeline{VK_NULL_HANDLE};
   // VkPipeline       m_graphicsPipeline2;
 
   nvvk::DescriptorSetBindings m_descSetLayoutBind;
-  VkDescriptorPool            m_descPool;
-  VkDescriptorSetLayout       m_descSetLayout;
-  VkDescriptorSet             m_descSet;
+  VkDescriptorPool            m_descPool{VK_NULL_HANDLE};
+  VkDescriptorSetLayout       m_descSetLayout{VK_NULL_HANDLE};
+  VkDescriptorSet             m_descSet{VK_NULL_HANDLE};
 
   nvvk::Buffer m_bGlobals;  // Device-Host of the camera matrices
   nvvk::Buffer m_bObjDesc;  // Device buffer of the OBJ descriptions
@@ -147,12 +147,12 @@ public:
   VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rtProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
   nvvk::RaytracingBuilderKHR                        m_rtBuilder;
   nvvk::DescriptorSetBindings                       m_rtDescSetLayoutBind;
-  VkDescriptorPool                                  m_rtDescPool;
-  VkDescriptorSetLayout                             m_rtDescSetLayout;
-  VkDescriptorSet                                   m_rtDescSet;
+  VkDescriptorPool                                  m_rtDescPool{VK_NULL_HANDLE};
+  VkDescriptorSetLayout                             m_rtDescSetLayout{VK_NULL_HANDLE};
+  VkDescriptorSet                                   m_rtDescSet{VK_NULL_HANDLE};
   std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_rtShaderGroups;
-  VkPipelineLayout                                  m_rtPipelineLayout;
-  VkPipeline                                        m_rtPipeline;
+  VkPipelineLayout                                  m_rtPipelineLayout{VK_NULL_HANDLE};
+  VkPipeline                                        m_rtPipeline{VK_NULL_HANDLE};
 
   nvvk::Buffer                    m_rtSBTBuffer;
   VkStridedDeviceAddressRegionKHR m_rgenRegion{};
@@ -161,7 +161,7 @@ public:
   VkStridedDeviceAddressRegionKHR m_callRegion{};
 
   // Push constant for ray tracer
-  PushConstantRay m_pcRay{.max_depth = 1, .spp_num = 8, .algo_type = PathTracingAlgos::NEE};
+  PushConstantRay m_pcRay{.max_depth = 1, .spp_num = 8, .algo_type = PathTracingAlgos::RIS};
 
 
   // Record whether the settings of this frame to be rendered has been changed
@@ -181,17 +181,27 @@ public:
   nvvk::Buffer                m_ReStirBufferCur;
   nvvk::Buffer                m_ReStirBufferPrev;
   nvvk::DescriptorSetBindings m_ReStirDescSetLayoutBind;
-  VkDescriptorPool            m_ReStirDescPool;
-  VkDescriptorSetLayout       m_ReStirDescSetLayout;
-  VkDescriptorSet             m_ReStirDescSet;  // 0- m_ReStirBufferCur 1- m_ReStirBufferPrev
+  VkDescriptorPool            m_ReStirDescPool{VK_NULL_HANDLE};
+  VkDescriptorSetLayout       m_ReStirDescSetLayout{VK_NULL_HANDLE};
+  VkDescriptorSet             m_ReStirDescSet{VK_NULL_HANDLE};  // 0- m_ReStirBufferCur 1- m_ReStirBufferPrev
 
   nvvk::DescriptorSetBindings m_GbufferDescSetLayoutBind;
-  VkDescriptorPool            m_GbufferDescPool;
-  VkDescriptorSetLayout       m_GbufferDescSetLayout;
-  VkDescriptorSet             m_GbufferDescSet;  // 0- world position 1- normal 2- ks
+  VkDescriptorPool            m_GbufferDescPool{VK_NULL_HANDLE};
+  VkDescriptorSetLayout       m_GbufferDescSetLayout{VK_NULL_HANDLE};
+  VkDescriptorSet             m_GbufferDescSet{VK_NULL_HANDLE};  // 0- world position 1- normal 2- ks
 
-  VkPipelineLayout m_RIScomputePipeLayout;
-  VkPipeline       m_RIScomputePipeLine;
+  VkPipelineLayout m_RIScomputePipeLayout{VK_NULL_HANDLE};
+  VkPipeline       m_RIScomputePipeLine{VK_NULL_HANDLE};
 
   PushConstantComputeRIS m_pcRIS{.CandidateNum = 32};
+
+  /*============================================================================*/
+  /*                  Compute pipeline 2: Spatial reuse                         */
+  /*============================================================================*/
+  void createComputePipeline_Spatial();
+  void computeSpatial(const VkCommandBuffer& cmdBuf);
+
+  VkPipelineLayout           m_SpatialComputePipeLayout{VK_NULL_HANDLE};
+  VkPipeline                 m_SpatialComputePipeLine{VK_NULL_HANDLE};
+  PushConstantComputeSpatial m_pcSpatial{.spatial_pass_num = 3, .k_neighbors_num = 5};
 };

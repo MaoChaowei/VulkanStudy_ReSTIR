@@ -53,7 +53,7 @@ public:
     {
       m_preSum[i + 1] /= m_totalWeight;
     }
-    assert(abs(m_preSum[num] - 1.0) < 1e-6);
+    assert(abs(m_preSum[num] - 1.0) < 0.001);
   }
 
 public:

@@ -47,10 +47,11 @@ START_BINDING(PathTracingAlgos)
   NEE                       =0,
   NEE_temporal_reuse        =1,
   RIS                       =2,
-  RIS_spatial_reuse         =3,
-  RIS_spatiotemporal_reuse   =4,
+  RIS_temporal_reuse        =3,
+  RIS_spatial_reuse         =4,
+  RIS_spatiotemporal_reuse  =5,
 
-  PathTracingAlgos_Count    =5
+  PathTracingAlgos_Count    =6
 END_BINDING();
 
 // clang-format on
@@ -96,6 +97,13 @@ struct PushConstantComputeRIS
   float    emitterTotalWeight;
 };
 
+// push constant structure for the second compute shader
+struct PushConstantComputeSpatial
+{
+  int spatial_pass_num;
+  int k_neighbors_num;
+};
+
 // Push constant structure for the ray tracer
 struct PushConstantRay
 {
@@ -105,7 +113,7 @@ struct PushConstantRay
   uint     emitterTriangleNum;
   float    emitterTotalWeight;
   int      frame_num;
-  int      restir_spp_num;
+  int      restir_spp_idx;
 
   // SETTINGS
   int max_depth;
@@ -155,9 +163,10 @@ struct LightSample
 struct Reservoir
 {
   LightSample keptSample;
-  float       totalWeight;  // current weight
-  uint        sampleNum;    // seen this much of samples so far
-  float       targetPdf;    // (target pdf value)
+  float       totalWeight;   // current weight
+  uint        sampleNum;     // seen this much of samples so far
+  float       sampleWeight;  // 1/(target_pdf)*(totalWeight/sampleNum)
+  float       target_pdf;
 };
 
 

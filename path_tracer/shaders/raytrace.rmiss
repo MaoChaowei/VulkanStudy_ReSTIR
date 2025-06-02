@@ -34,5 +34,5 @@ layout(push_constant) uniform _PushConstantRay
 
 void main()
 {
-  prd.hitValue = pcRay.clearColor.xyz * 0.8;
+  prd.direct_radiance = pcRay.clearColor.xyz * 0.8;
 }

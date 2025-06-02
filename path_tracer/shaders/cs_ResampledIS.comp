@@ -6,9 +6,10 @@
 #extension GL_GOOGLE_include_directive : enable
 #extension  GL_ARB_shader_clock:require
 
-#include "host_device.h"
-#include "sampling.glsl"
 #include "raycommon.glsl"
+#include "sampling.glsl"
+#include"host_device.h"
+#include "reservoir.glsl"
 
 layout(local_size_x = CS_WORK_GROUP_SIZE_X, local_size_y = CS_WORK_GROUP_SIZE_Y, local_size_z = 1) in;
 
@@ -51,36 +52,6 @@ uint binarySearchEmitFace(float u)
     return lt;
 }
 
-float getLuminance(vec3 radiance_rgb)
-{
-  return (0.2126 * radiance_rgb[0] + 0.7152 * radiance_rgb[1] + 0.0722 * radiance_rgb[2]);
-}
-
-bool updateReservoir(inout Reservoir r,LightSample lightSample,float src_pdf,float target_pdf,uint seed){
-    // struct Reservoir
-    // {
-    //   LightSample keptSample;
-    //   float       totalWeight;  // current weight
-    //   uint        sampleNum;    // seen this much of samples so far
-    //   float       targetPdf;    // (target pdf value)
-    // };
-    // if candidate's pdf is too small, just ignore it
-    if(target_pdf<EPSILON||src_pdf<EPSILON){
-        r.sampleNum+=1;
-        return false;
-    }
-    float weight=clamp(target_pdf/src_pdf,0,100);
-    r.sampleNum+=1;
-    r.totalWeight+=weight;
-    if(rnd(seed)<weight/r.totalWeight){
-        r.keptSample=lightSample;
-        r.targetPdf=target_pdf;
-        return true;
-    }
-
-    return false;
-}
-
 void main(){
     // get the size of the image
     ivec2 imgSize = imageSize(wPosGbuffer);
@@ -95,8 +66,7 @@ void main(){
     vec3 kd=imageLoad(KdGbuffer,ivec2(gl_GlobalInvocationID.xy)).xyz;
     EmitterTriangles emitters=EmitterTriangles(pcRIS.emitterTrianglesAddress);
 
-    // get current reservoir
-    Reservoir cur_r=current[pixel_idx];
+    Reservoir cur_r;
     cur_r.totalWeight=0;
     cur_r.sampleNum=0;
 
@@ -105,11 +75,9 @@ void main(){
     float final_light_dist=0.f;
     float final_lightNdotL=0.f;
     float final_srcNdotL=0.f;
+    float final_target_pdf=0.f;
 
     for(int i=0;i<pcRIS.CandidateNum;++i){
-        //------------------------------------//
-        //      direct light sampling         //
-        //------------------------------------//
         // Sampling a light point with pdf(A)=pointWeight/totalWeight
         uint emitTriangleID=binarySearchEmitFace(rnd(seed));
         EmitTriangle emitTriangle=emitters.i[emitTriangleID];
@@ -120,7 +88,7 @@ void main(){
             u1=1-u1;
             u2=1-u2;
         }
-        
+
         vec3 dst_pos = (1 - u1 - u2) * emitTriangle.m_vpos[0] + u1 *emitTriangle.m_vpos[1] + u2 * emitTriangle.m_vpos[2];
         vec3 light_norm = emitTriangle.m_normal;
         vec3 light_radiance=emitTriangle.m_radiance;
@@ -141,20 +109,25 @@ void main(){
         float pdf_light=getLuminance(light_radiance)/pcRIS.emitterTotalWeight;
         float G=d2/lightNdotL;
         float pdf_source=pdf_light*G;// converted to pdf_w
-        // float pdf_target = pdf_source* srcNdotL;// because of the simplicity of Lambertian reflection model,the src pdf is quite simple as well
-        float pdf_target = getLuminance(light_radiance*kd) * srcNdotL /G ;   // L · f · cos / d^2
+        float pdf_target = getLuminance(light_radiance*kd) * srcNdotL ;///G ;  
+        float weight=pdf_target/pdf_source;
+
         LightSample light_sample;
         light_sample.lightPos=dst_pos;
         light_sample.lightNrm=light_norm;
         light_sample.radiance=light_radiance;
-
-        bool is_preserved=updateReservoir(cur_r,light_sample,pdf_source,pdf_target,seed);
+    
+        if(pdf_source<EPSILON||pdf_target<EPSILON){
+            weight=0;
+        }
+        bool is_preserved=updateReservoir(cur_r,light_sample,weight,seed);
 
         if(is_preserved){
             final_shadow_ray_dir=shadow_ray_dir;
             final_light_dist=light_dist;
             final_lightNdotL=lightNdotL;
             final_srcNdotL=srcNdotL;
+            final_target_pdf=pdf_target;
         }
     }
 
@@ -188,6 +161,9 @@ void main(){
             cur_r.totalWeight=0.f;
         }
     }
+
+    // calculate keptSample's weight
+    cur_r.sampleWeight=(1.0/final_target_pdf)*(cur_r.totalWeight/cur_r.sampleNum);
 
     // write back
     current[pixel_idx]=cur_r;

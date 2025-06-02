@@ -465,11 +465,14 @@ void HelloVulkan::createTextureImages(const VkCommandBuffer& cmdBuf, const std::
 //
 void HelloVulkan::destroyResources()
 {
+  vkDeviceWaitIdle(m_device);
 
+  vkDestroyPipeline(m_device, m_SpatialComputePipeLine, nullptr);
   vkDestroyPipeline(m_device, m_RIScomputePipeLine, nullptr);
   vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
   // vkDestroyPipeline(m_device, m_graphicsPipeline2, nullptr);
 
+  vkDestroyPipelineLayout(m_device, m_SpatialComputePipeLayout, nullptr);
   vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
   vkDestroyPipelineLayout(m_device, m_RIScomputePipeLayout, nullptr);
 

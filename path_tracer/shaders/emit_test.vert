@@ -28,13 +28,13 @@ void main()
       uint triId = vid / 3;
       uint corner= vid % 3;
       if(triId >= pcRaster.emitterTriangleNum) {
-          gl_Position = vec4(2.0); // 丢到屏幕外
+          gl_Position = vec4(2.0); 
           return;
       }
       gl_Position = uni.viewProj *vec4(emitBuf.i[triId].m_vpos[corner], 1.0);
     }
     else{
-      gl_Position = vec4(2.0); // 丢到屏幕外
+      gl_Position = vec4(2.0); 
     }
 
 }

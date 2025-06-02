@@ -28,6 +28,7 @@ layout(set = 0, binding = eTlas) uniform accelerationStructureEXT topLevelAS;
 layout(set = 1, binding = eObjDescs, scalar) buffer ObjDesc_ { ObjDesc i[]; } objDesc;
 layout(set = 1, binding = eTextures) uniform sampler2D textureSamplers[];
 layout(set=2,binding=eReservoirCur,scalar) buffer ReservoirCur_{Reservoir current[];};
+layout(set=2,binding=eReservoirPrev,scalar) buffer ReservoirPrev_{Reservoir previous[];};
 
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 // clang-format on
@@ -125,24 +126,29 @@ void main()
   vec3 light_norm=vec3(0.f);
   vec3 light_radiance=vec3(0.f);
 
-  if(pcRay.algo_type==RIS||pcRay.algo_type==RIS_spatial_reuse||pcRay.algo_type==RIS_spatiotemporal_reuse){
-    Reservoir cur_r=current[gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x];
+  if(pcRay.algo_type==RIS||pcRay.algo_type==RIS_spatial_reuse||pcRay.algo_type==RIS_spatiotemporal_reuse||pcRay.algo_type==RIS_temporal_reuse){
+    bool is_RIS=pcRay.algo_type==RIS||pcRay.algo_type==RIS_temporal_reuse;
+    Reservoir cur_r=is_RIS?current[gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x]:
+                            previous[gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x];
+
     LightSample lightSample=cur_r.keptSample;
     light_pos=lightSample.lightPos;
     light_norm = lightSample.lightNrm;
     light_radiance=lightSample.radiance;
     // float weighted_pdf=max(0.f,1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum);
-    float weighted_pdf=cur_r.targetPdf<EPSILON?0:(1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum);
-
-
+    float weighted_pdf=max(0.f,cur_r.sampleWeight);
+    
     vec3 shadow_ray_dir=light_pos-worldPos;
     float light_dist=length(shadow_ray_dir);
     shadow_ray_dir=normalize(shadow_ray_dir);
 
     float srcNdotL=max(dot(worldNrm,shadow_ray_dir),0);
     vec3 bsdf=albedo/PI;
+    float inv_pdf_A=pcRay.emitterTotalWeight/getLuminance(light_radiance);
     rpd.direct_radiance=bsdf*srcNdotL*light_radiance*weighted_pdf;
 
+    // rpd.direct_radiance=vec3(cur_r.sampleWeight-(1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum));
+    
   }
   else if(pcRay.algo_type==NEE||pcRay.algo_type==NEE_temporal_reuse)
   {

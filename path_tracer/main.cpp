@@ -1,3 +1,5 @@
+// chaowei mao 25/5
+
 #include <array>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "backends/imgui_impl_glfw.h"
@@ -21,6 +23,36 @@ std::vector<std::string> defaultSearchPaths;
 static int const         WINDOW_WIDTH  = 1280;
 static int const         WINDOW_HEIGHT = 720;
 
+void printHelp()
+{
+  std::cout << "scene loader:\n"
+            << "  instruction: -f <filename> \n"
+            << "  example: ./program -f fireplace_room\n\n"
+            << "available scene model:\n"
+            << "  fireplace_room\n"
+            << "  dragon( default scene )\n"
+            << "  buddha\n"
+            << "  living_room\n";
+}
+
+std::string parseCommandLine(int argc, char* argv[], std::string default_file = "dragon")
+{
+  std::string filename = default_file;
+  for(int i = 1; i < argc; ++i)
+  {
+    std::string arg = argv[i];
+    if(arg == "-f" && i + 1 < argc)
+    {
+      filename = argv[++i];
+    }
+    else if(arg == "-h" || arg == "--help")
+    {
+      printHelp();
+      exit(0);
+    }
+  }
+  return filename;
+}
 
 // GLFW Callback functions
 static void onErrorCallback(int error, const char* description)
@@ -48,7 +80,7 @@ void renderUI(HelloVulkan& helloVk)
 
     // path tracing mode
     static const char* PathTracingAlgosNames[PathTracingAlgos::PathTracingAlgos_Count] = {
-        "NEE", "NEE_temporal_reuse", "RIS", "RIS_spatial_reuse", "RIS_spatiotemporal_reuse"};
+        "NEE", "NEE_temporal_reuse", "RIS", "RIS_temporal_reuse", "RIS_spatial_reuse", "RIS_spatiotemporal_reuse"};
 
     const char* preview = PathTracingAlgosNames[helloVk.m_pcRay.algo_type];
     int         old     = helloVk.m_pcRay.algo_type;
@@ -69,9 +101,17 @@ void renderUI(HelloVulkan& helloVk)
     helloVk.m_frameChange |= old != helloVk.m_pcRay.algo_type;
 
     // RESTIR setting
-    if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse)
+    if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS
+       || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatiotemporal_reuse
+       || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_temporal_reuse)
     {
       helloVk.m_frameChange |= ImGui::SliderInt("Candidate Num", &helloVk.m_pcRIS.CandidateNum, 16, 1024);
+      if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse
+         || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatiotemporal_reuse)
+      {
+        helloVk.m_frameChange |= ImGui::SliderInt("Spatial Pass Num", &helloVk.m_pcSpatial.spatial_pass_num, 1, 4);
+        helloVk.m_frameChange |= ImGui::SliderInt("Sample K-neighbors", &helloVk.m_pcSpatial.k_neighbors_num, 1, 6);
+      }
     }
   }
 }
@@ -89,7 +129,9 @@ void vkContextInit(nvvk::Context& vkctx)
   contextInfo.setVersion(1, 4);                       // Using Vulkan 1.4
   for(uint32_t ext_id = 0; ext_id < count; ext_id++)  // Adding required extensions (surface, win32, linux, ..)
     contextInfo.addInstanceExtension(reqExtensions[ext_id]);
-  contextInfo.addInstanceLayer("VK_LAYER_LUNARG_monitor", true);              // FPS in titlebar
+  contextInfo.addInstanceLayer("VK_LAYER_LUNARG_monitor", true);  // FPS in titlebar
+  contextInfo.addInstanceLayer("VK_LAYER_KHRONOS_validation", true);
+
   contextInfo.addInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, true);  // Allow debug names
   contextInfo.addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);            // Enabling ability to present rendering
 
@@ -112,35 +154,47 @@ void vkContextInit(nvvk::Context& vkctx)
   vkctx.initDevice(compatibleDevices[0], contextInfo);  // Use a compatible device
 }
 
-void sceneLoader(HelloVulkan& helloVk)
+void sceneLoader(HelloVulkan& helloVk, std::string name)
 {
   // Setup camera
   CameraManip.setWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
   CameraManip.setLookat(glm::vec3(0, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
 
   std::unordered_map<std::string, glm::mat4> trans;
-  trans["buddha"] = glm::translate(glm::mat4(1.0), glm::vec3(0.39555, 1.07519, 0.44344));
+  trans["buddha"] = glm::translate(glm::mat4(1.0), glm::vec3(0, 1, 0));
   trans["buddha"] = glm::rotate(trans["buddha"], 3.14f, glm::vec3(0, 1, 0));
+  trans["buddha"] = glm::scale(trans["buddha"], glm::vec3(1.2, 1.2, 1.2));
 
   trans["dragon"] = glm::translate(glm::mat4(1.0), glm::vec3(0, 1, 0));
   trans["dragon"] = glm::rotate(trans["dragon"], 3.14f * 0.7f, glm::vec3(0, 1, 0));
   trans["dragon"] = glm::scale(trans["dragon"], glm::vec3(1.2, 1.2, 1.2));
 
-  if(0)
+  if(name == "fireplace_room")
   {
     helloVk.loadModel(nvh::findFile("media/scenes/fireplace_room/fireplace_room.obj", defaultSearchPaths, true));
     CameraManip.setLookat(glm::vec3(4.20767, 1.01458, -3.20028), glm::vec3(-1.06465, 1.35220, 0.32594), glm::vec3(0, 1, 0));
   }
-  else if(1)
+  else if(name == "dragon")
+  {
+    // helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-Lights.obj", defaultSearchPaths, true),
+    //                   glm::rotate(glm::mat4(1.f), 3.14f, glm::vec3(0, 1, 0)));
+    // helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-CO.obj", defaultSearchPaths, true));
+    // helloVk.loadModel(nvh::findFile("media/scenes/dragon/dragon.obj", defaultSearchPaths, true), trans["dragon"]);
+
+    helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Original.obj", defaultSearchPaths, true));
+    CameraManip.setLookat(glm::vec3(0, 1, 2), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
+    CameraManip.setFov(90);
+  }
+  else if(name == "buddha")
   {
     helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-Lights.obj", defaultSearchPaths, true),
                       glm::rotate(glm::mat4(1.f), 3.14f, glm::vec3(0, 1, 0)));
     helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-CO.obj", defaultSearchPaths, true));
     helloVk.loadModel(nvh::findFile("media/scenes/buddha/buddha.obj", defaultSearchPaths, true), trans["buddha"]);
-    // helloVk.loadModel(nvh::findFile("media/scenes/dragon/dragon.obj", defaultSearchPaths, true), trans["dragon"]);
-    CameraManip.setLookat(glm::vec3(0.06118, 1.20128, 3.09162), glm::vec3(0.06005, 1.13624, 2.09373), glm::vec3(0, 1, 0));
+    CameraManip.setLookat(glm::vec3(0, 1, 2), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
+    CameraManip.setFov(90);
   }
-  else
+  else if(name == "living_room")
   {
     helloVk.loadModel(nvh::findFile("media/scenes/living_room/living_room.obj", defaultSearchPaths, true));
     CameraManip.setLookat(glm::vec3(2.08361, 1.76848, 5.29191), glm::vec3(1.55202, 1.61265, 4.45936), glm::vec3(0, 1, 0));
@@ -150,7 +204,8 @@ void sceneLoader(HelloVulkan& helloVk)
 
 int main(int argc, char** argv)
 {
-  UNUSED(argc);
+  // UNUSED(argc);
+  std::string scene_flie = parseCommandLine(argc, argv);
 
   // Setup GLFW window
   glfwSetErrorCallback(onErrorCallback);
@@ -199,7 +254,7 @@ int main(int argc, char** argv)
   }
 
   // Scene Preparation
-  sceneLoader(helloVk);
+  sceneLoader(helloVk, scene_flie);
 
   //=========================================================================================
   //                                resource creation
@@ -229,7 +284,7 @@ int main(int argc, char** argv)
   // - SceneBindings::eTextures : texture buffers
   //
   // *renderpass0 subpass0 Frame Buffers:
-  // - Texture m_offscreenColor; (can be showcased in post pipeline)
+  // - Texture m_GraphicColor; (can be showcased in the post pipeline)
   // - Texture m_gPosition, m_gNormal, m_gAlbedo; (G buffers for defferd shading or something)
   // - Texture m_offscreenDepth; (vk build-in depth test)
   //==========================================================================================
@@ -244,6 +299,7 @@ int main(int argc, char** argv)
 
   //==================================
   // Compute Pipeline 2 Setup
+  helloVk.createComputePipeline_Spatial();
 
   //==================================
   // Ray tracing Pipeline Setup
@@ -279,7 +335,6 @@ int main(int argc, char** argv)
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-
     // Show UI window.
     if(helloVk.showGui())
     {
@@ -296,7 +351,6 @@ int main(int argc, char** argv)
 
     // Start rendering the scene
     helloVk.prepareFrame();
-
     // Start command buffer of this frame
     auto                   curFrame = helloVk.getCurFrame();
     const VkCommandBuffer& cmdBuf   = helloVk.getCommandBuffers()[curFrame];
@@ -305,22 +359,23 @@ int main(int argc, char** argv)
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(cmdBuf, &beginInfo);
 
-    // Clearing screen
-    std::array<VkClearValue, 5> clearValues{};
-    {
-      clearValues[0].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-      clearValues[1].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-      clearValues[2].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-      clearValues[4].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-      clearValues[5].depthStencil = {1.0f, 0};
-    }
-
     // Updating Per Frame Status before any pass: camera buffer, frame num...
     helloVk.updateUniformBuffer(cmdBuf);
     helloVk.updateFrame();
 
     // Offscreen render pass
     {
+      // Clearing screen
+      std::array<VkClearValue, 5> clearValues{};
+      {
+        clearValues[0].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+        clearValues[1].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+        clearValues[2].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+        clearValues[3].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+        clearValues[4].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+        clearValues[5].depthStencil = {1.0f, 0};
+      }
+
       VkRenderPassBeginInfo offscreenRenderPassBeginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
       offscreenRenderPassBeginInfo.clearValueCount = 5;
       offscreenRenderPassBeginInfo.pClearValues    = clearValues.data();
@@ -328,13 +383,17 @@ int main(int argc, char** argv)
       offscreenRenderPassBeginInfo.framebuffer     = helloVk.m_offscreenFramebuffer;
       offscreenRenderPassBeginInfo.renderArea      = {{0, 0}, helloVk.getSize()};
 
+
       // Rendering Scene
       if(useRaytracer)
       {
-        if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS)
+        if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatial_reuse
+           || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_temporal_reuse
+           || helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatiotemporal_reuse)
         {
 
-          for(helloVk.m_pcRay.frame_num = 0; helloVk.m_pcRay.frame_num < helloVk.m_pcRay.spp_num; ++helloVk.m_pcRay.frame_num)
+          for(helloVk.m_pcRay.restir_spp_idx = 0; helloVk.m_pcRay.restir_spp_idx < helloVk.m_pcRay.spp_num;
+              ++helloVk.m_pcRay.restir_spp_idx)
           {
             // 1. graphic pipeline to generate G-buffer
             vkCmdBeginRenderPass(cmdBuf, &offscreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -379,7 +438,6 @@ int main(int argc, char** argv)
             }
             // 2. compute pipeline 1: RIS with Direct light sampling
             helloVk.computeRIS(cmdBuf);
-
             // memory barrier: write reservoirCur in cs1 -> read in cs2
             {
               VkMemoryBarrier2 comp2comp{VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
@@ -394,9 +452,25 @@ int main(int argc, char** argv)
 
               vkCmdPipelineBarrier2(cmdBuf, &depInfo2);
             }
+            if(helloVk.m_pcRay.algo_type == RIS_spatial_reuse || helloVk.m_pcRay.algo_type == RIS_spatiotemporal_reuse)
+            {
+              // 3. compute pipeline 2: Spatiol reuse
+              helloVk.computeSpatial(cmdBuf);
+              // memory barrier: write reservoirPrv in cs2 -> read in ray tracing
+              {
+                VkMemoryBarrier2 comp2comp{VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
+                comp2comp.srcStageMask  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+                comp2comp.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT;
+                comp2comp.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+                comp2comp.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 
-            // 3. compute pipeline 2: Spatiol reuse
+                VkDependencyInfo depInfo2{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+                depInfo2.memoryBarrierCount = 1;
+                depInfo2.pMemoryBarriers    = &comp2comp;
 
+                vkCmdPipelineBarrier2(cmdBuf, &depInfo2);
+              }
+            }
             // 4. raytracing to shade direct light
             helloVk.raytrace(cmdBuf, clearColor);
             {
@@ -409,10 +483,6 @@ int main(int argc, char** argv)
               vkCmdPipelineBarrier2(cmdBuf, &depInfo);
             }
           }
-        }
-        else if(helloVk.m_pcRay.algo_type == PathTracingAlgos::RIS_spatiotemporal_reuse)
-        {
-          exit(-1);
         }
         else
         {
@@ -431,6 +501,13 @@ int main(int argc, char** argv)
 
     // 2nd rendering pass: tone mapper, UI
     {
+      // Clearing screen
+      std::array<VkClearValue, 2> clearValues{};
+      {
+        clearValues[0].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
+        clearValues[1].depthStencil = {1.0f, 0};
+      }
+
       VkRenderPassBeginInfo postRenderPassBeginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
       postRenderPassBeginInfo.clearValueCount = 2;
       postRenderPassBeginInfo.pClearValues    = clearValues.data();

@@ -54,6 +54,18 @@ vec3 samplingHemisphere(inout uint seed, in vec3 x, in vec3 y, in vec3 z)
   return direction;
 }
 
+// randomlu samples a point in a disk
+vec2 sampleDisk(float R, float u1, float u2)
+{
+#define M_PI 3.14159265
+  float r     = R * sqrt(u1);     // 半径分布 ~ 2r/R^2
+  float theta = 2.0f * M_PI * u2;   // 角度均匀
+
+  return vec2(r * cos(theta),
+              r * sin(theta));
+}
+
+
 // Return the tangent and binormal from the incoming normal
 void createCoordinateSystem(in vec3 N, out vec3 Nt, out vec3 Nb)
 {
