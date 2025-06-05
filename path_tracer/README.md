@@ -1,1 +1,0 @@
-使用vulkan api复现Restir算法

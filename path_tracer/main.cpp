@@ -176,12 +176,12 @@ void sceneLoader(HelloVulkan& helloVk, std::string name)
   }
   else if(name == "dragon")
   {
-    // helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-Lights.obj", defaultSearchPaths, true),
-    //                   glm::rotate(glm::mat4(1.f), 3.14f, glm::vec3(0, 1, 0)));
-    // helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-CO.obj", defaultSearchPaths, true));
-    // helloVk.loadModel(nvh::findFile("media/scenes/dragon/dragon.obj", defaultSearchPaths, true), trans["dragon"]);
+    helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-Lights.obj", defaultSearchPaths, true),
+                      glm::rotate(glm::mat4(1.f), 3.14f, glm::vec3(0, 1, 0)));
+    helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Empty-CO.obj", defaultSearchPaths, true));
+    helloVk.loadModel(nvh::findFile("media/scenes/dragon/dragon.obj", defaultSearchPaths, true), trans["dragon"]);
 
-    helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Original.obj", defaultSearchPaths, true));
+    // helloVk.loadModel(nvh::findFile("media/scenes/CornellBox/CornellBox-Original.obj", defaultSearchPaths, true));
     CameraManip.setLookat(glm::vec3(0, 1, 2), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
     CameraManip.setFov(90);
   }

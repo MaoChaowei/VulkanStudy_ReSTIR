@@ -120,7 +120,8 @@ void main(){
         if(pdf_source<EPSILON||pdf_target<EPSILON){
             weight=0;
         }
-        bool is_preserved=updateReservoir(cur_r,light_sample,weight,seed);
+        // bool is_preserved=updateReservoir(cur_r,light_sample,weight,seed);
+         bool is_preserved=updateReservoir(cur_r,light_sample,weight,pdf_target,seed);
 
         if(is_preserved){
             final_shadow_ray_dir=shadow_ray_dir;

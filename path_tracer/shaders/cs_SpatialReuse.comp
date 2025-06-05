@@ -23,7 +23,7 @@ layout(set=1,binding=eComputeOutImage, rgba32f) uniform image2D image;
 
 layout(push_constant) uniform _PushConstantComputeSpatial { PushConstantComputeSpatial pcSpatial; };
 
-# define SAMPLE_RADIUS 6
+# define SAMPLE_RADIUS 5
 
 void main(){
     // get the size of the image
@@ -48,6 +48,13 @@ void main(){
         pos.x=clamp(pos.x,0,imgSize.x-1);
         pos.y=clamp(pos.y,0,imgSize.y-1);
 
+        vec3 neighborPos=imageLoad(wPosGbuffer,ivec2(pos.xy)).xyz;
+        vec3 neighborNorm=imageLoad(wNormGbuffer,ivec2(pos.xy)).xyz;
+
+        // ignore neighbors whose position or normal is far different from current's.
+        if(dot(neighborNorm,worldNrm)<0.8||length(neighborPos-worldPos)>0.01)
+            continue;
+
         Reservoir neighbor_r=current[pos.y * imgSize.x + pos.x];
         sampleNum+=neighbor_r.sampleNum;
 
@@ -63,12 +70,13 @@ void main(){
 
         float adjusted_weight=target_pdf*neighbor_r.sampleWeight*neighbor_r.sampleNum;
 
-        // updateReservoir(cur_r,neighbor_r.keptSample, adjusted_weight, target_pdf ,seed);
-        updateReservoir(cur_r,neighbor_r.keptSample, adjusted_weight ,seed);
+        updateReservoir(cur_r,neighbor_r.keptSample, adjusted_weight, target_pdf ,seed);
+        // updateReservoir(cur_r,neighbor_r.keptSample, adjusted_weight ,seed);
+    
     }
     // calculate keptSample's weight
-    // cur_r.sampleWeight=(1.0/cur_r.target_pdf)*(cur_r.totalWeight/cur_r.sampleNum);
-    // cur_r.sampleNum=sampleNum;
+    cur_r.sampleNum=sampleNum;
+    cur_r.sampleWeight=(1.0/cur_r.target_pdf)*(cur_r.totalWeight/cur_r.sampleNum);
 
     // write back
     previous[pixel_idx]=cur_r;

@@ -118,8 +118,10 @@ void main()
   //------------------------------------//
   // for the (1)First-depth, hit the (2)Front face of an Emitter, then get its emission
   rpd.emit_radiance=vec3(0.f);
-  if(rpd.depth==0&&dot(rpd.ray.direction,worldNrm)<0.f)
+  if(rpd.depth==0&&dot(rpd.ray.direction,worldNrm)<0.f&&(mtl.emission[0]>0||mtl.emission[1]>0||mtl.emission[2]>0)){
     rpd.emit_radiance=mtl.emission;
+    return;
+  }
 
 
   vec3 light_pos=vec3(0.f);
@@ -137,7 +139,7 @@ void main()
     light_radiance=lightSample.radiance;
     // float weighted_pdf=max(0.f,1.0/cur_r.targetPdf*cur_r.totalWeight/cur_r.sampleNum);
     float weighted_pdf=max(0.f,cur_r.sampleWeight);
-    
+  
     vec3 shadow_ray_dir=light_pos-worldPos;
     float light_dist=length(shadow_ray_dir);
     shadow_ray_dir=normalize(shadow_ray_dir);
